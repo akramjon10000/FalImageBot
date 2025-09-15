@@ -182,6 +182,7 @@ async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         image_saved = False
         
         # Check if the response contains candidates (generated content)
+        candidate = None
         if response.candidates and len(response.candidates) > 0:
             candidate = response.candidates[0]
             
@@ -211,7 +212,7 @@ async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 await status_message.edit_text(error_msg)
             else:
                 await update.message.reply_text(error_msg)
-            logger.error(f"No image data found in Gemini response. Response structure: {[type(part).__name__ for part in candidate.content.parts] if candidate.content and candidate.content.parts else 'No parts'}")
+            logger.error(f"No image data found in Gemini response. Response structure: {[type(part).__name__ for part in candidate.content.parts] if candidate and candidate.content and candidate.content.parts else 'No parts'}")
             return
         
         # Save the generated image to a temporary file
@@ -381,6 +382,7 @@ async def edit_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         image_saved = False
         
         # Check if the response contains candidates (generated content)
+        candidate = None
         if response.candidates and len(response.candidates) > 0:
             candidate = response.candidates[0]
             
@@ -410,7 +412,7 @@ async def edit_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                 await status_message.edit_text(error_msg)
             else:
                 await update.message.reply_text(error_msg)
-            logger.error(f"No image data found in Gemini editing response. Response structure: {[type(part).__name__ for part in candidate.content.parts] if candidate.content and candidate.content.parts else 'No parts'}")
+            logger.error(f"No image data found in Gemini editing response. Response structure: {[type(part).__name__ for part in candidate.content.parts] if candidate and candidate.content and candidate.content.parts else 'No parts'}")
             return
         
         # Save the edited image to a temporary file
