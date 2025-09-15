@@ -69,7 +69,8 @@ The application implements comprehensive logging using Python's built-in logging
 - **Environment Configuration**: Set up API keys (TELEGRAM_BOT_TOKEN, GOOGLE_API_KEY) via Replit Secrets
 - **Workflow Setup**: Configured Bot workflow to run main.py continuously
 - **Deployment**: Configured for VM deployment to maintain persistent bot operation
-- **Status**: Bot is connecting to both Telegram and Google AI APIs successfully
+- **Single Instance Policy**: Bot configured to run as single instance to avoid Telegram polling conflicts
+- **Status**: Bot is connecting to both Telegram and Google AI APIs successfully and running without errors
 
 ## Previous - Channel Posting System Complete
 - **Channel Posting Feature**: Added automated daily posting system with AI-generated images and educational content
