@@ -1,5 +1,6 @@
 python-telegram-bot>=20.0
 google-generativeai
 python-dotenv
+telegram>=0.0.1
 
 [dev]

@@ -522,6 +522,12 @@ wheels = [
 ]
 
 [[package]]
+name = "telegram"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9d/ca/8bdf2deb93b9f6971dabf2ddc827c2a98ce23e13582a15b37e9bc169f226/telegram-0.0.1.tar.gz", hash = "sha256:d405a0af4c868a8dbeae6d03e297e21c7ee6269e11e2ed3810e15544aba02591", size = 879 }
+
+[[package]]
 name = "telegram-image-bot"
 version = "1.0.0"
 source = { editable = "." }
@@ -529,6 +535,7 @@ dependencies = [
     { name = "google-generativeai" },
     { name = "python-dotenv" },
     { name = "python-telegram-bot" },
+    { name = "telegram" },
 ]
 
 [package.metadata]
@@ -536,6 +543,7 @@ requires-dist = [
     { name = "google-generativeai" },
     { name = "python-dotenv" },
     { name = "python-telegram-bot", specifier = ">=20.0" },
+    { name = "telegram", specifier = ">=0.0.1" },
 ]
 
 [[package]]
