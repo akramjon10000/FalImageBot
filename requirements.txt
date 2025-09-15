@@ -35,3 +35,6 @@ urllib3==2.5.0
 google-generativeai
 telegram
 python-telegram-bot[job-queue]
+google-generativeai
+python-telegram-bot
+telegram
