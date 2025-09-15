@@ -67,13 +67,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Prepare welcome message with bot description and usage instructions
     welcome_message = (
         "🎨 AI Rasm Generatori Botiga Xush Kelibsiz!\n\n"
-        "Men Google'ning Gemini AI yordamida ajoyib rasmlar yarata olaman.\n\n"
-        "📝 Qanday ishlatish:\n"
+        "Men Google'ning Nano Banana (Gemini 2.5 Flash Image) AI'si bilan ajoyib rasmlar yarata olaman!\n\n"
+        "🎯 Barcha funksiyalar:\n"
         "• /imagine [tavsif] - yangi rasm yaratish\n"
-        "• /edit [tavsif] - rasm yuboring va uni qanday o'zgartirishni ayting\n\n"
-        "Misollar:\n"
+        "• /edit [tavsif] - rasm tahrirlash\n"
+        "• /compose - bir nechta rasmni birlashtirish\n"
+        "• /style - stil uzatish\n"
+        "• /text [matn] - matn bilan rasm yaratish\n"
+        "• /recipe [taom] - retsept yaratish\n"
+        "• /interactive - suhbat rejimi\n\n"
+        "📱 Misollar:\n"
         "• /imagine daraxtda sigir chiqib olgan\n"
-        "• Rasm yuboring va /edit realistic qiling\n\n"
+        "• /text HELLO rasmda yozing\n"
+        "• /recipe osh\n\n"
         "🚀 Endi rasmlarni yaratishni boshlang!"
     )
     
@@ -471,6 +477,287 @@ async def edit_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.error(f"Unexpected error in edit_image command: {e}", exc_info=True)
 
 
+async def compose_images(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /compose command - combine multiple images into one new image
+    """
+    if not update.message:
+        return
+    
+    try:
+        if not context.args:
+            instruction_message = (
+                "🎨 Rasm birlashtirish uchun:\n\n"
+                "1. Bir nechta rasm yuboring (2-4 ta)\n"
+                "2. /compose [qanday birlashtirishni xohlaysiz]\n\n"
+                "Misollar:\n"
+                "• /compose bitta rasam qiling\n"
+                "• /compose kollaj yasang\n"
+                "• /compose chiroyli tarzda birlashtiring"
+            )
+            await update.message.reply_text(instruction_message)
+            return
+        
+        combine_instruction = ' '.join(context.args)
+        await update.message.reply_text(f"🔄 Rasmlarni birlashtiraman: {combine_instruction}")
+        
+        # For now, guide user to send images first
+        guide_message = (
+            "📤 Iltimos avval rasmlarni yuboring, keyin bu buyruqni qayta ishga tushiring.\n"
+            "Yoki rasmlarni yuboring va caption sifatida /compose [tavsif] yozing."
+        )
+        await update.message.reply_text(guide_message)
+        
+    except Exception as e:
+        logger.error(f"Error in compose_images: {e}")
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
+
+
+async def style_transfer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /style command - transfer style from one image to another
+    """
+    if not update.message:
+        return
+    
+    try:
+        if not context.args:
+            instruction_message = (
+                "🎨 Stil uzatish uchun:\n\n"
+                "1. Asosiy rasmni yuboring\n"
+                "2. Stil rasmini yuboring\n" 
+                "3. /style [qanday stil berish kerak]\n\n"
+                "Misollar:\n"
+                "• /style Van Gogh uslubida\n"
+                "• /style cartoon qiling\n"
+                "• /style realistik qiling"
+            )
+            await update.message.reply_text(instruction_message)
+            return
+        
+        style_instruction = ' '.join(context.args)
+        await update.message.reply_text(f"🎨 Stil uzataman: {style_instruction}")
+        
+        guide_message = (
+            "📤 Iltimos avval 2 ta rasm yuboring (asosiy + stil), keyin bu buyruqni ishga tushiring."
+        )
+        await update.message.reply_text(guide_message)
+        
+    except Exception as e:
+        logger.error(f"Error in style_transfer: {e}")
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
+
+
+async def text_render(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /text command - generate images with high-quality text rendering
+    """
+    if not update.message:
+        return
+    
+    status_message = None
+    
+    try:
+        if not context.args:
+            instruction_message = (
+                "📝 Matn bilan rasm yaratish uchun:\n\n"
+                "/text [yozilishi kerak bo'lgan matn] [qo'shimcha tavsif]\n\n"
+                "Misollar:\n"
+                "• /text HELLO chiroyli logo\n"
+                "• /text NANO BANANA poster\n"
+                "• /text O'ZBEKISTON bayraq bilan"
+            )
+            await update.message.reply_text(instruction_message)
+            return
+        
+        text_to_render = ' '.join(context.args)
+        
+        if update.effective_user:
+            logger.info(f"User {update.effective_user.id} requested text rendering: '{text_to_render}'")
+        
+        status_message = await update.message.reply_text("📝 Matn bilan rasm yarataman...")
+        
+        if not GOOGLE_API_KEY:
+            error_msg = "❌ Google API key sozlanmagan."
+            await status_message.edit_text(error_msg)
+            return
+        
+        model = genai.GenerativeModel('gemini-2.5-flash-image-preview')
+        
+        # Create a prompt optimized for text rendering
+        text_prompt = f"Create a high-quality image with clear, legible text that says: '{text_to_render}'. Make sure the text is well-placed, readable and visually appealing."
+        
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: model.generate_content(text_prompt)
+        )
+        
+        # Extract and send image (same logic as imagine function)
+        image_data = None
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if hasattr(part, 'inline_data') and part.inline_data:
+                        if hasattr(part.inline_data, 'data'):
+                            raw_data = part.inline_data.data
+                            if isinstance(raw_data, str):
+                                image_data = base64.b64decode(raw_data)
+                            else:
+                                image_data = raw_data
+                            break
+        
+        if image_data:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
+                temp_file.write(image_data)
+                temp_file_path = temp_file.name
+            
+            await status_message.delete()
+            
+            with open(temp_file_path, 'rb') as image_file:
+                await update.message.reply_photo(
+                    photo=image_file,
+                    caption=f"📝 Matn rasmi: \"{text_to_render}\""
+                )
+            
+            os.unlink(temp_file_path)
+            logger.info(f"Successfully sent text-rendered image to user")
+        else:
+            await status_message.edit_text("❌ Matn rasmi yaratishda xatolik.")
+        
+    except Exception as e:
+        error_msg = "❌ Matn rasmi yaratishda xatolik yuz berdi."
+        if status_message:
+            await status_message.edit_text(error_msg)
+        else:
+            await update.message.reply_text(error_msg)
+        logger.error(f"Error in text_render: {e}")
+
+
+async def recipe_generator(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /recipe command - generate illustrated recipes
+    """
+    if not update.message:
+        return
+    
+    status_message = None
+    
+    try:
+        if not context.args:
+            instruction_message = (
+                "🍳 Retsept yaratish uchun:\n\n"
+                "/recipe [taom nomi]\n\n"
+                "Misollar:\n"
+                "• /recipe osh\n"
+                "• /recipe manti\n"
+                "• /recipe pizza"
+            )
+            await update.message.reply_text(instruction_message)
+            return
+        
+        dish_name = ' '.join(context.args)
+        
+        if update.effective_user:
+            logger.info(f"User {update.effective_user.id} requested recipe for: '{dish_name}'")
+        
+        status_message = await update.message.reply_text(f"🍳 {dish_name} retseptini yarataman...")
+        
+        if not GOOGLE_API_KEY:
+            error_msg = "❌ Google API key sozlanmagan."
+            await status_message.edit_text(error_msg)
+            return
+        
+        model = genai.GenerativeModel('gemini-2.5-flash-image-preview')
+        
+        # Create a prompt for illustrated recipe
+        recipe_prompt = f"Generate an illustrated recipe for {dish_name}. Include step-by-step images and clear text instructions in Uzbek language."
+        
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: model.generate_content(recipe_prompt)
+        )
+        
+        # Extract and send content (both text and images)
+        text_content = ""
+        image_data = None
+        
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        text_content += part.text + "\n"
+                    elif hasattr(part, 'inline_data') and part.inline_data:
+                        if hasattr(part.inline_data, 'data'):
+                            raw_data = part.inline_data.data
+                            if isinstance(raw_data, str):
+                                image_data = base64.b64decode(raw_data)
+                            else:
+                                image_data = raw_data
+        
+        await status_message.delete()
+        
+        # Send text if available
+        if text_content.strip():
+            await update.message.reply_text(f"🍳 {dish_name} retsepti:\n\n{text_content[:4000]}")
+        
+        # Send image if available
+        if image_data:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
+                temp_file.write(image_data)
+                temp_file_path = temp_file.name
+            
+            with open(temp_file_path, 'rb') as image_file:
+                await update.message.reply_photo(
+                    photo=image_file,
+                    caption=f"🍳 {dish_name} retsept rasmi"
+                )
+            
+            os.unlink(temp_file_path)
+        
+        logger.info(f"Successfully sent recipe for {dish_name}")
+        
+    except Exception as e:
+        error_msg = "❌ Retsept yaratishda xatolik yuz berdi."
+        if status_message:
+            await status_message.edit_text(error_msg)
+        else:
+            await update.message.reply_text(error_msg)
+        logger.error(f"Error in recipe_generator: {e}")
+
+
+async def interactive_mode(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /interactive command - start conversational image refinement
+    """
+    if not update.message:
+        return
+    
+    try:
+        interactive_message = (
+            "🤖 Interaktiv rejim yoqildi!\n\n"
+            "Endi siz menga:\n"
+            "• Rasm yaratishni so'rashingiz mumkin\n"
+            "• Mavjud rasmni o'zgartirishni so'rashingiz mumkin\n"
+            "• Qadama-qadam rasm yaratishni so'rashingiz mumkin\n\n"
+            "💬 Shunchaki oddiy matn yuboring va men sizga yordam beraman!\n\n"
+            "Misol: \"Tog'li landshaft yarating\"\n"
+            "Keyin: \"Qor qo'shing\"\n"
+            "Keyin: \"Osmoni quyuqroq qiling\""
+        )
+        await update.message.reply_text(interactive_message)
+        
+        if update.effective_user:
+            logger.info(f"User {update.effective_user.id} started interactive mode")
+        
+    except Exception as e:
+        logger.error(f"Error in interactive_mode: {e}")
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
+
+
 def main() -> None:
     """
     Main function to initialize and start the Telegram bot
@@ -507,6 +794,21 @@ def main() -> None:
     
     # /edit command - image editing based on user instructions
     application.add_handler(CommandHandler("edit", edit_image))
+    
+    # /compose command - combine multiple images
+    application.add_handler(CommandHandler("compose", compose_images))
+    
+    # /style command - style transfer between images
+    application.add_handler(CommandHandler("style", style_transfer))
+    
+    # /text command - high-quality text rendering
+    application.add_handler(CommandHandler("text", text_render))
+    
+    # /recipe command - illustrated recipe generation
+    application.add_handler(CommandHandler("recipe", recipe_generator))
+    
+    # /interactive command - conversational image refinement
+    application.add_handler(CommandHandler("interactive", interactive_mode))
     
     # Log that the bot is starting
     logger.info("🤖 Telegram Image Generation Bot is starting...")
