@@ -1,289 +1,245 @@
 #!/usr/bin/env python3
 """
-Telegram Image Generation Bot
-Uses Fal.ai Stable Diffusion API to generate images from text prompts
+Telegram Image Generation Bot using Google Generative AI (Gemini)
+
+This bot provides two main commands:
+1. /start - Welcome message and usage instructions
+2. /imagine <prompt> - Generate an image from a text prompt using Google's Gemini AI
+
+The bot uses Replit Secrets to securely store API keys and handles image generation
+by saving the generated image to a temporary file before sending it to the user.
 """
 
 import os
 import logging
-import json
+import tempfile
 import asyncio
-import aiohttp
+from io import BytesIO
 from dotenv import load_dotenv
+
+# Import Telegram bot libraries (python-telegram-bot v20+)
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.error import TelegramError
-from typing import Optional
 
-# Load environment variables
+# Import Google Generative AI library for image generation
+import google.generativeai as genai
+
+# Load environment variables from .env file (if exists)
 load_dotenv()
 
-# Configure logging
+# Configure logging to track bot operations and errors
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Get API keys from environment variables
+# Get API keys from Replit Secrets (environment variables)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-FAL_AI_API_KEY = os.getenv('FAL_AI_API_KEY')
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
-# Fal.ai API configuration - Updated to correct endpoint
-FAL_AI_ENDPOINT = 'https://queue.fal.run/fal-ai/stable-diffusion-v15'
-FAL_AI_HEADERS = {
-    'Authorization': f'Key {FAL_AI_API_KEY}',
-    'Content-Type': 'application/json'
-}
+# Configure Google Generative AI with the API key
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    logger.info("Google Generative AI configured successfully")
+else:
+    logger.warning("GOOGLE_API_KEY not found in environment variables")
 
-async def poll_for_result(session: aiohttp.ClientSession, request_id: str, max_polls: int = 30) -> Optional[dict]:
-    """
-    Poll Fal.ai queue API for completion of queued request
-    """
-    status_endpoint = f'https://queue.fal.run/fal-ai/stable-diffusion-v15/requests/{request_id}/status'
-    result_endpoint = f'https://queue.fal.run/fal-ai/stable-diffusion-v15/requests/{request_id}'
-    
-    for poll_count in range(max_polls):
-        try:
-            # Check status
-            async with session.get(status_endpoint, headers=FAL_AI_HEADERS) as response:
-                if response.status == 200:
-                    status_data = await response.json()
-                    status = status_data.get('status', '')
-                    
-                    if status == 'COMPLETED':
-                        # Get the result
-                        async with session.get(result_endpoint, headers=FAL_AI_HEADERS) as result_response:
-                            if result_response.status == 200:
-                                return await result_response.json()
-                            else:
-                                logger.error(f"Failed to get result: {result_response.status}")
-                                return None
-                    
-                    elif status in ['FAILED', 'CANCELLED']:
-                        logger.error(f"Request failed with status: {status}")
-                        return None
-                    
-                    # Still in progress, wait and poll again
-                    await asyncio.sleep(2)  # Wait 2 seconds between polls
-                else:
-                    logger.error(f"Status check failed: {response.status}")
-                    await asyncio.sleep(2)
-                    
-        except Exception as e:
-            logger.error(f"Error polling for result: {e}")
-            await asyncio.sleep(2)
-    
-    # Max polls reached
-    logger.error(f"Polling timeout after {max_polls} attempts")
-    return None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Handle the /start command - send welcome message in Uzbek
+    Handle the /start command - send welcome message with usage instructions
+    
+    Args:
+        update: Telegram update object containing the message
+        context: Telegram context for the current conversation
     """
+    # Check if the update contains a message
     if not update.message:
         return
         
+    # Prepare welcome message with bot description and usage instructions
     welcome_message = (
-        "Salom! Rasm yaratish uchun /generate buyrug'idan keyin o'z tavsifingizni yozing. "
-        "Masalan: /generate an astronaut riding a horse on Mars"
+        "🎨 Welcome to the AI Image Generator Bot!\n\n"
+        "I can create amazing images from your text descriptions using Google's Gemini AI.\n\n"
+        "📝 How to use:\n"
+        "• Send /imagine followed by your image description\n"
+        "• Example: /imagine a beautiful sunset over mountains\n\n"
+        "🚀 Start creating your images now!"
     )
     
     try:
+        # Send the welcome message to the user
         await update.message.reply_text(welcome_message)
+        
+        # Log the user interaction for monitoring
         if update.effective_user:
-            logger.info(f"User {update.effective_user.id} started the bot")
+            logger.info(f"User {update.effective_user.id} ({update.effective_user.username}) started the bot")
+            
     except TelegramError as e:
+        # Handle any errors that occur while sending the welcome message
         logger.error(f"Failed to send welcome message: {e}")
 
-async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Handle the /generate command - generate image from text prompt using Fal.ai
+    Handle the /imagine command - generate image from text prompt using Google Gemini AI
+    
+    This function:
+    1. Extracts the text prompt from the user's command
+    2. Validates that a prompt was provided
+    3. Sends a "generating" status message to the user
+    4. Uses Google's Gemini AI to generate an image
+    5. Saves the generated image to a temporary file
+    6. Sends the image back to the user via Telegram
+    
+    Args:
+        update: Telegram update object containing the message
+        context: Telegram context containing command arguments
     """
+    # Check if the update contains a message
     if not update.message:
         return
-        
+    
+    # Initialize variables for status tracking
     status_message = None
     
     try:
-        # Extract the text prompt from the command
+        # Extract the text prompt from command arguments
         if not context.args:
-            error_message = "Iltimos, /generate buyrug'idan so'ng rasm uchun tavsif yozing."
-            try:
-                await update.message.reply_text(error_message)
-            except TelegramError as e:
-                logger.error(f"Failed to send error message: {e}")
+            error_message = (
+                "❌ Please provide a description for the image you want to generate.\n"
+                "Example: /imagine a cat sitting on a rainbow"
+            )
+            await update.message.reply_text(error_message)
             return
         
         # Join all arguments to form the complete prompt
         text_prompt = ' '.join(context.args)
         
-        # Check if prompt is empty after joining
+        # Validate that the prompt is not empty after joining
         if not text_prompt.strip():
-            error_message = "Iltimos, /generate buyrug'idan so'ng rasm uchun tavsif yozing."
-            try:
-                await update.message.reply_text(error_message)
-            except TelegramError as e:
-                logger.error(f"Failed to send error message: {e}")
+            error_message = (
+                "❌ Please provide a description for the image you want to generate.\n"
+                "Example: /imagine a cat sitting on a rainbow"
+            )
+            await update.message.reply_text(error_message)
             return
         
+        # Log the image generation request
         if update.effective_user:
-            logger.info(f"User {update.effective_user.id} requested image generation with prompt: {text_prompt}")
+            logger.info(f"User {update.effective_user.id} requested image generation with prompt: '{text_prompt}'")
         
-        # Send "generating" message to user
-        generating_message = "Rasm yaratilmoqda, iltimos kuting..."
+        # Send status message to inform user that generation has started
+        generating_message = "🎨 Generating your image, please wait..."
         try:
             status_message = await update.message.reply_text(generating_message)
         except TelegramError as e:
             logger.error(f"Failed to send status message: {e}")
-            # Still continue with image generation
+            # Continue with image generation even if status message fails
         
-        # Prepare the API request payload
-        payload = {
-            "prompt": text_prompt,
-            "image_size": "square_hd",
-            "num_inference_steps": 25,  # Reduced from 50 for faster generation
-            "guidance_scale": 7.5,
-            "num_images": 1,
-            "enable_safety_checker": True
-        }
-        
-        # Use async HTTP request instead of blocking requests
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                FAL_AI_ENDPOINT,
-                headers=FAL_AI_HEADERS,
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=120)
-            ) as response:
-                
-                # Handle queue-based processing
-                if response.status == 202:
-                    # Request was queued, need to poll for result
-                    response_data = await response.json()
-                    request_id = response_data.get('request_id')
-                    
-                    if not request_id:
-                        error_msg = "Fal.ai API xatosi: Request ID topilmadi"
-                        if status_message:
-                            try:
-                                await status_message.edit_text(error_msg)
-                            except TelegramError:
-                                pass
-                        logger.error("No request_id in 202 response")
-                        return
-                    
-                    # Poll for completion
-                    result = await poll_for_result(session, request_id)
-                    if not result:
-                        error_msg = "Rasm yaratish juda uzoq davom etdi. Iltimos qayta urinib ko'ring."
-                        if status_message:
-                            try:
-                                await status_message.edit_text(error_msg)
-                            except TelegramError:
-                                pass
-                        return
-                    
-                    response_data = result
-                
-                elif response.status == 200:
-                    # Direct response (sync mode)
-                    response_data = await response.json()
-                
-                else:
-                    # Error response
-                    error_text = await response.text()
-                    error_msg = f"Xatolik yuz berdi. API javob kodi: {response.status}"
-                    if status_message:
-                        try:
-                            await status_message.edit_text(error_msg)
-                        except TelegramError:
-                            pass
-                    logger.error(f"Fal.ai API error: {response.status} - {error_text}")
-                    return
-        
-        # Extract image URL from response - handle both direct and wrapped responses
-        # Fal.ai queue results may wrap output under 'response' key
-        actual_data = response_data.get('response') or response_data
-        logger.info(f"Fal.ai response structure: {list(actual_data.keys()) if isinstance(actual_data, dict) else type(actual_data)}")
-        
-        if isinstance(actual_data, dict) and 'images' in actual_data and len(actual_data['images']) > 0:
-            image_url = actual_data['images'][0]['url']
-            
-            # Delete the "generating" message
+        # Check if Google API key is configured
+        if not GOOGLE_API_KEY:
+            error_msg = "❌ Google API key is not configured. Please contact the bot administrator."
             if status_message:
-                try:
-                    await status_message.delete()
-                except TelegramError as e:
-                    logger.warning(f"Could not delete status message: {e}")
+                await status_message.edit_text(error_msg)
+            else:
+                await update.message.reply_text(error_msg)
+            logger.error("Attempted image generation without Google API key")
+            return
+        
+        # Initialize the Gemini model for image generation
+        # Note: Using the latest Gemini model that supports image generation
+        model = genai.GenerativeModel('gemini-2.0-flash-preview-image-generation')
+        
+        # Generate image using Google Gemini AI
+        logger.info(f"Sending image generation request to Google Gemini AI")
+        response = model.generate_content(
+            text_prompt,
+            generation_config=genai.types.GenerationConfig(
+                # Request both text and image modalities
+                response_modalities=['TEXT', 'IMAGE']
+            )
+        )
+        
+        # Process the response and extract image data
+        image_data = None
+        image_saved = False
+        
+        # Check if the response contains candidates (generated content)
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
             
-            # Send the generated image to user
+            # Iterate through all parts of the response
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    # Check if this part contains inline image data
+                    if hasattr(part, 'inline_data') and part.inline_data:
+                        image_data = part.inline_data.data
+                        logger.info("Successfully extracted image data from Gemini response")
+                        break
+                    # Log any text responses from the model
+                    elif hasattr(part, 'text') and part.text:
+                        logger.info(f"Gemini text response: {part.text}")
+        
+        # If no image data was found in the response
+        if not image_data:
+            error_msg = "❌ Failed to generate image. The AI service did not return image data."
+            if status_message:
+                await status_message.edit_text(error_msg)
+            else:
+                await update.message.reply_text(error_msg)
+            logger.error("No image data found in Gemini response")
+            return
+        
+        # Save the generated image to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
+            temp_file.write(image_data)
+            temp_file_path = temp_file.name
+            image_saved = True
+            logger.info(f"Image saved to temporary file: {temp_file_path}")
+        
+        # Delete the status message since we're about to send the image
+        if status_message:
             try:
-                await update.message.reply_photo(
-                    photo=image_url,
-                    caption=f"Yaratilgan rasm: \"{text_prompt}\""
-                )
-                
-                if update.effective_user:
-                    logger.info(f"Successfully generated and sent image for user {update.effective_user.id}")
+                await status_message.delete()
             except TelegramError as e:
-                error_msg = "Rasm yuborishda xatolik yuz berdi. Iltimos qayta urinib ko'ring."
-                try:
-                    await update.message.reply_text(error_msg)
-                except TelegramError:
-                    pass
-                logger.error(f"Failed to send image: {e}")
-        else:
-            error_msg = "Rasm yaratishda xatolik yuz berdi. Iltimos qayta urinib ko'ring."
-            if status_message:
-                try:
-                    await status_message.edit_text(error_msg)
-                except TelegramError:
-                    try:
-                        await update.message.reply_text(error_msg)
-                    except TelegramError:
-                        pass
-            logger.error(f"No image URL in Fal.ai response. Full response: {response_data}")
+                logger.warning(f"Could not delete status message: {e}")
+        
+        # Send the generated image to the user
+        try:
+            with open(temp_file_path, 'rb') as image_file:
+                await update.message.reply_photo(
+                    photo=image_file,
+                    caption=f"🎨 Generated image: \"{text_prompt}\""
+                )
             
-    except asyncio.TimeoutError:
-        error_msg = "Rasm yaratish juda uzoq davom etdi. Iltimos qayta urinib ko'ring."
-        if status_message:
+            logger.info(f"Successfully sent generated image to user {update.effective_user.id if update.effective_user else 'unknown'}")
+            
+        except TelegramError as e:
+            # If sending the image fails, try to send an error message
+            error_msg = "❌ Failed to send the generated image. Please try again."
             try:
-                await status_message.edit_text(error_msg)
+                await update.message.reply_text(error_msg)
             except TelegramError:
-                try:
-                    await update.message.reply_text(error_msg)
-                except TelegramError:
-                    pass
-        logger.error("Fal.ai API request timed out")
+                pass
+            logger.error(f"Failed to send image: {e}")
         
-    except aiohttp.ClientError as e:
-        error_msg = "Tarmoq xatosi yuz berdi. Iltimos qayta urinib ko'ring."
-        if status_message:
-            try:
-                await status_message.edit_text(error_msg)
-            except TelegramError:
+        finally:
+            # Clean up: remove the temporary file
+            if image_saved:
                 try:
-                    await update.message.reply_text(error_msg)
-                except TelegramError:
-                    pass
-        logger.error(f"Network error during Fal.ai API request: {e}")
-        
-    except json.JSONDecodeError as e:
-        error_msg = "Javobni o'qishda xatolik yuz berdi. Iltimos qayta urinib ko'ring."
-        if status_message:
-            try:
-                await status_message.edit_text(error_msg)
-            except TelegramError:
-                try:
-                    await update.message.reply_text(error_msg)
-                except TelegramError:
-                    pass
-        logger.error(f"JSON decode error from Fal.ai response: {e}")
-        
+                    os.unlink(temp_file_path)
+                    logger.info("Temporary image file cleaned up")
+                except OSError as e:
+                    logger.warning(f"Failed to delete temporary file: {e}")
+    
     except Exception as e:
-        error_msg = "Kutilmagan xatolik yuz berdi. Iltimos qayta urinib ko'ring."
+        # Handle any unexpected errors during image generation
+        error_msg = "❌ An unexpected error occurred while generating your image. Please try again."
+        
+        # Try to update status message or send new error message
         if status_message:
             try:
                 await status_message.edit_text(error_msg)
@@ -292,36 +248,59 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     await update.message.reply_text(error_msg)
                 except TelegramError:
                     pass
-        logger.error(f"Unexpected error in generate_image: {e}")
+        else:
+            try:
+                await update.message.reply_text(error_msg)
+            except TelegramError:
+                pass
+        
+        logger.error(f"Unexpected error in imagine command: {e}", exc_info=True)
+
 
 def main() -> None:
     """
-    Main function to start the Telegram bot
+    Main function to initialize and start the Telegram bot
+    
+    This function:
+    1. Validates that required API keys are available
+    2. Creates the Telegram Application instance
+    3. Registers command handlers for /start and /imagine
+    4. Starts the bot in polling mode to listen for messages
     """
-    # Check if required API keys are available
+    # Check if the Telegram Bot Token is available
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN is not set in environment variables")
-        print("Error: TELEGRAM_BOT_TOKEN environment variable is required")
-        return
-        
-    if not FAL_AI_API_KEY:
-        logger.error("FAL_AI_API_KEY is not set in environment variables")
-        print("Error: FAL_AI_API_KEY environment variable is required")
+        print("❌ Error: TELEGRAM_BOT_TOKEN environment variable is required")
+        print("Please add your Telegram Bot Token to Replit Secrets")
         return
     
-    # Create the Application
+    # Check if the Google API Key is available
+    if not GOOGLE_API_KEY:
+        logger.error("GOOGLE_API_KEY is not set in environment variables")
+        print("❌ Error: GOOGLE_API_KEY environment variable is required")
+        print("Please add your Google API Key to Replit Secrets")
+        return
+    
+    # Create the Telegram Application instance with the bot token
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     
     # Register command handlers
+    # /start command - welcome message and instructions
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("generate", generate_image))
+    
+    # /imagine command - image generation from text prompt
+    application.add_handler(CommandHandler("imagine", imagine))
     
     # Log that the bot is starting
-    logger.info("Telegram Image Generation Bot is starting...")
-    print("Bot is starting... Press Ctrl+C to stop.")
+    logger.info("🤖 Telegram Image Generation Bot is starting...")
+    print("🚀 Bot is starting... Press Ctrl+C to stop.")
+    print("💡 Make sure you have set TELEGRAM_BOT_TOKEN and GOOGLE_API_KEY in Replit Secrets")
     
-    # Run the bot until the user presses Ctrl-C
+    # Start the bot and keep it running until interrupted
+    # This enables the bot to receive and respond to messages
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
+
+# Entry point - run the bot when script is executed directly
 if __name__ == '__main__':
     main()

@@ -1,11 +1,9 @@
 Metadata-Version: 2.4
 Name: telegram-image-bot
 Version: 1.0.0
-Summary: Telegram bot for AI image generation using Fal.ai
+Summary: Telegram bot for AI image generation using Google Generative AI (Gemini)
 Requires-Python: >=3.11
-Requires-Dist: python-telegram-bot==22.4
-Requires-Dist: python-dotenv>=1.0.0
-Requires-Dist: aiohttp>=3.12.15
-Requires-Dist: google-genai>=1.36.0
-Requires-Dist: telegram>=0.0.1
+Requires-Dist: python-telegram-bot>=20.0
+Requires-Dist: google-generativeai
+Requires-Dist: python-dotenv
 Provides-Extra: dev
