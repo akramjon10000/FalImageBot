@@ -24,6 +24,7 @@ from telegram.error import TelegramError
 
 # Import Google Generative AI library for image generation
 import google.generativeai as genai
+import base64
 
 # Load environment variables from .env file (if exists)
 load_dotenv()
@@ -150,16 +151,21 @@ async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         
         # Initialize the Gemini model for image generation
-        # Note: Using the latest Gemini model that supports image generation
-        model = genai.GenerativeModel('gemini-2.0-flash-preview-image-generation')
+        # Note: Using Gemini 1.5 Flash model with image generation capability
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Generate image using Google Gemini AI
         logger.info(f"Sending image generation request to Google Gemini AI")
-        response = model.generate_content(
-            text_prompt,
-            generation_config=genai.types.GenerationConfig(
-                # Request both text and image modalities
-                response_modalities=['TEXT', 'IMAGE']
+        
+        # Use asyncio executor to avoid blocking the event loop
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: model.generate_content(
+                f"Create an image of: {text_prompt}",
+                generation_config=genai.GenerationConfig(
+                    response_mime_type="image/png"
+                )
             )
         )
         
@@ -176,21 +182,28 @@ async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 for part in candidate.content.parts:
                     # Check if this part contains inline image data
                     if hasattr(part, 'inline_data') and part.inline_data:
-                        image_data = part.inline_data.data
-                        logger.info("Successfully extracted image data from Gemini response")
-                        break
+                        # Check if the data is base64 encoded or raw bytes
+                        if hasattr(part.inline_data, 'data'):
+                            raw_data = part.inline_data.data
+                            # If data is string (base64), decode it
+                            if isinstance(raw_data, str):
+                                image_data = base64.b64decode(raw_data)
+                            else:
+                                image_data = raw_data
+                            logger.info("Successfully extracted image data from Gemini response")
+                            break
                     # Log any text responses from the model
                     elif hasattr(part, 'text') and part.text:
                         logger.info(f"Gemini text response: {part.text}")
         
         # If no image data was found in the response
         if not image_data:
-            error_msg = "❌ Failed to generate image. The AI service did not return image data."
+            error_msg = "❌ Failed to generate image. The model may not support image generation or your prompt couldn't be processed."
             if status_message:
                 await status_message.edit_text(error_msg)
             else:
                 await update.message.reply_text(error_msg)
-            logger.error("No image data found in Gemini response")
+            logger.error(f"No image data found in Gemini response. Response structure: {[type(part).__name__ for part in candidate.content.parts] if candidate.content and candidate.content.parts else 'No parts'}")
             return
         
         # Save the generated image to a temporary file
