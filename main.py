@@ -16,6 +16,7 @@ import tempfile
 import asyncio
 from io import BytesIO
 from dotenv import load_dotenv
+from collections import defaultdict
 
 # Import Telegram bot libraries (python-telegram-bot v20+)
 from telegram import Update
@@ -39,6 +40,9 @@ logger = logging.getLogger(__name__)
 # Suppress sensitive logging to prevent secret leakage
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("telegram").setLevel(logging.WARNING)
+
+# Store user image context for interactive processing
+user_image_context = defaultdict(dict)
 
 # Get API keys from Replit Secrets (environment variables)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -760,6 +764,301 @@ async def interactive_mode(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text("❌ Xatolik yuz berdi.")
 
 
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle when user sends a photo - analyze it and ask what they want to do
+    
+    This function:
+    1. Downloads the photo from Telegram
+    2. Uses Gemini to analyze and describe the image
+    3. Stores the image data for future use
+    4. Asks user what they want to do with the image
+    
+    Args:
+        update: Telegram update object containing the photo message
+        context: Telegram context for the current conversation
+    """
+    if not update.message or not update.message.photo:
+        return
+    
+    user_id = update.effective_user.id if update.effective_user else None
+    if not user_id:
+        return
+    
+    status_message = None
+    
+    try:
+        # Send status message
+        analyzing_message = "🔍 Rasmingizni ko'rib chiqyapman..."
+        try:
+            status_message = await update.message.reply_text(analyzing_message)
+        except TelegramError as e:
+            logger.error(f"Failed to send status message: {e}")
+        
+        # Check if Google API key is configured
+        if not GOOGLE_API_KEY:
+            error_msg = "❌ Google API key sozlanmagan. Bot administratori bilan bog'laning."
+            if status_message:
+                await status_message.edit_text(error_msg)
+            else:
+                await update.message.reply_text(error_msg)
+            logger.error("Attempted image analysis without Google API key")
+            return
+        
+        # Get the highest resolution photo
+        photo = update.message.photo[-1]
+        
+        # Download the image from Telegram
+        file = await photo.get_file()
+        image_bytes = await file.download_as_bytearray()
+        
+        logger.info(f"Downloaded image from user {user_id}, size: {len(image_bytes)} bytes")
+        
+        # Store the image data for future use
+        user_image_context[user_id] = {
+            'image_data': image_bytes,
+            'file_id': photo.file_id,
+            'timestamp': update.message.date
+        }
+        
+        # Initialize the Gemini model for image analysis
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Create the image part for Gemini
+        image_part = {
+            "mime_type": "image/jpeg",
+            "data": base64.b64encode(image_bytes).decode('utf-8')
+        }
+        
+        # Create prompt to analyze the image
+        analysis_prompt = "Bu rasmni tahlil qiling va qisqacha tasvirlab bering. Rasmda nima ko'rinmoqda?"
+        
+        # Analyze image using Google Gemini AI
+        logger.info(f"Sending image analysis request to Google Gemini AI for user {user_id}")
+        
+        # Use asyncio executor to avoid blocking the event loop
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: model.generate_content([analysis_prompt, image_part])
+        )
+        
+        # Extract the analysis from the response
+        image_description = ""
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        image_description = part.text.strip()
+                        break
+        
+        if not image_description:
+            image_description = "Rasmni tahlil qila olmadim."
+            logger.warning(f"No description generated for image from user {user_id}")
+        
+        # Delete the status message
+        if status_message:
+            try:
+                await status_message.delete()
+            except TelegramError as e:
+                logger.warning(f"Could not delete status message: {e}")
+        
+        # Create response message with image analysis and options
+        response_text = f"🖼️ **Rasmingizni ko'rdim!**\n\n📝 **Tasvir:** {image_description}\n\n🎯 **Nima qilishni xohlaysiz?**\n\n"
+        response_text += "• **'tahlil qil'** - batafsil tahlil\n"
+        response_text += "• **'tahrirlang'** - rasmni tahrirlash\n"
+        response_text += "• **'matnni o'qing'** - rasmdagi matnni o'qish\n"
+        response_text += "• **'o'xshash yarating'** - o'xshash rasm yaratish\n"
+        response_text += "• **'savol'** - rasm haqida savol berish\n"
+        response_text += "• **'stil uzating'** - boshqa rasmga stil uzatish\n\n"
+        response_text += "💬 Faqat nima qilishni xohlayotganingizni yozing!"
+        
+        # Send the response
+        await update.message.reply_text(response_text, parse_mode='Markdown')
+        
+        logger.info(f"Successfully analyzed image and sent options to user {user_id}")
+        
+    except Exception as e:
+        # Handle any unexpected errors during image analysis
+        error_msg = "❌ Rasmni tahlil qilishda kutilmagan xatolik yuz berdi. Iltimos qayta urinib ko'ring."
+        
+        # Try to update status message or send new error message
+        if status_message:
+            try:
+                await status_message.edit_text(error_msg)
+            except TelegramError:
+                try:
+                    await update.message.reply_text(error_msg)
+                except TelegramError:
+                    pass
+        else:
+            try:
+                await update.message.reply_text(error_msg)
+            except TelegramError:
+                pass
+        
+        logger.error(f"Unexpected error in handle_photo: {e}", exc_info=True)
+
+
+async def handle_image_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle user commands when they have a stored image context
+    
+    This function processes user requests about their previously sent image:
+    - Analysis requests
+    - Editing commands
+    - Text extraction
+    - Similar image generation
+    - Questions about the image
+    
+    Args:
+        update: Telegram update object containing the text message
+        context: Telegram context for the current conversation
+    """
+    if not update.message or not update.message.text:
+        return
+    
+    user_id = update.effective_user.id if update.effective_user else None
+    if not user_id:
+        return
+    
+    # Check if user has a stored image
+    if user_id not in user_image_context or 'image_data' not in user_image_context[user_id]:
+        return  # Let other handlers process this message
+    
+    user_text = update.message.text.lower().strip()
+    image_data = user_image_context[user_id]['image_data']
+    
+    status_message = None
+    
+    try:
+        # Check if Google API key is configured
+        if not GOOGLE_API_KEY:
+            error_msg = "❌ Google API key sozlanmagan. Bot administratori bilan bog'laning."
+            await update.message.reply_text(error_msg)
+            return
+        
+        # Initialize the Gemini model
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Create the image part for Gemini
+        image_part = {
+            "mime_type": "image/jpeg",
+            "data": base64.b64encode(image_data).decode('utf-8')
+        }
+        
+        # Skip if this is a command
+        if user_text.startswith('/'):
+            return  # Let command handlers process this
+        
+        # Determine what the user wants to do
+        if any(word in user_text for word in ['tahlil', 'analiz', 'batafsil', 'ko\'ring', 'koring']):
+            # Detailed analysis
+            status_message = await update.message.reply_text("🔍 Batafsil tahlil qilyapman...")
+            
+            prompt = "Bu rasmni batafsil tahlil qiling. Ranglar, obyektlar, kompozitsiya, kayfiyat va boshqa muhim xususiyatlar haqida to'liq ma'lumot bering."
+            
+        elif any(word in user_text for word in ['tahrir', 'edit', 'o\'zgartir', 'ozgartir']):
+            # Image editing request
+            status_message = await update.message.reply_text("🔄 Rasm tahrirlash uchun yo'l-yo'riq...")
+            
+            # For editing, we guide the user to use specific editing commands
+            edit_guide = (
+                "📝 **Rasm tahrirlash uchun:**\n\n"
+                "• `/edit [tavsif]` - rasmni tahrirlash\n"
+                "• Misol: `/edit realistic qiling`\n"
+                "• Misol: `/edit rang qizil qiling`\n\n"
+                "💡 Rasmingizni saqlagan holda `/edit` buyruqini ishlating!"
+            )
+            
+            await status_message.edit_text(edit_guide, parse_mode='Markdown')
+            return
+            
+        elif any(word in user_text for word in ['matn', 'text', 'o\'qi', 'oqi', 'yoz']):
+            # Text extraction (OCR)
+            status_message = await update.message.reply_text("📖 Rasmdagi matnni o'qiyapman...")
+            
+            prompt = "Bu rasmdagi barcha matnni o'qing va to'liq yozing. Agar matn yo'q bo'lsa, 'Rasmdagi matn topilmadi' deb yozing."
+            
+        elif any(word in user_text for word in ['o\'xshash', 'oxshash', 'yarating', 'similar', 'create']):
+            # Generate similar image
+            status_message = await update.message.reply_text("🎨 O'xshash rasm yaratish uchun tavsif tayyorlanmoqda...")
+            
+            prompt = "Bu rasmni tasvirlab bering va xuddi shunday rasm yaratish uchun ingliz tilidagi prompt tuzing. Faqat ingliz tilidagi prompt bering."
+            
+        else:
+            # General question or request
+            status_message = await update.message.reply_text("🤔 Sizning so'rovingizni bajarayapman...")
+            
+            prompt = f"Bu rasm haqida quyidagi so'rovni bajaring: {user_text}"
+        
+        # Generate response using Gemini
+        logger.info(f"Processing image command for user {user_id}: {user_text[:50]}...")
+        
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: model.generate_content([prompt, image_part])
+        )
+        
+        # Extract the response text
+        response_text = ""
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        response_text = part.text.strip()
+                        break
+        
+        if not response_text:
+            response_text = "Kechirasiz, so'rovingizni bajara olmadim. Iltimos qayta urinib ko'ring."
+            logger.warning(f"No response generated for user {user_id} image command")
+        
+        # Delete status message
+        if status_message:
+            try:
+                await status_message.delete()
+            except TelegramError as e:
+                logger.warning(f"Could not delete status message: {e}")
+        
+        await update.message.reply_text(response_text)
+        
+        # For similar image generation, try to create the image
+        if any(word in user_text for word in ['o\'xshash', 'oxshash', 'yarating']):
+            try:
+                # Use the generated prompt to create a similar image
+                context.args = response_text.split()
+                await asyncio.sleep(1)  # Brief pause
+                await update.message.reply_text("🚀 O'xshash rasm yaratib beraman...")
+                await imagine(update, context)
+            except Exception as e:
+                logger.error(f"Error generating similar image: {e}")
+        
+        logger.info(f"Successfully processed image command for user {user_id}")
+        
+    except Exception as e:
+        # Handle any unexpected errors
+        error_msg = "❌ So'rovingizni bajarishda xatolik yuz berdi. Iltimos qayta urinib ko'ring."
+        
+        if status_message:
+            try:
+                await status_message.edit_text(error_msg)
+            except TelegramError:
+                try:
+                    await update.message.reply_text(error_msg)
+                except TelegramError:
+                    pass
+        else:
+            try:
+                await update.message.reply_text(error_msg)
+            except TelegramError:
+                pass
+        
+        logger.error(f"Unexpected error in handle_image_command: {e}", exc_info=True)
+
+
 def main() -> None:
     """
     Main function to initialize and start the Telegram bot
@@ -811,6 +1110,12 @@ def main() -> None:
     
     # /interactive command - conversational image refinement
     application.add_handler(CommandHandler("interactive", interactive_mode))
+    
+    # Photo handler - when user sends an image, analyze and ask what to do
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    
+    # Text message handler - handle image-related commands when user has sent an image
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_image_command))
     
     # Log that the bot is starting
     logger.info("🤖 Telegram Image Generation Bot is starting...")
