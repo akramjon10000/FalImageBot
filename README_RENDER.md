@@ -6,14 +6,29 @@ Bu loyihani Render platformasiga yuklash uchun qo'llanma.
 
 Render dashboardda quyidagi environment variablelarni sozlang:
 
-### TELEGRAM_BOT_TOKEN
+### TELEGRAM_BOT_TOKEN (Majburiy)
 - Telegram'da @BotFather orqali bot yarating
 - Bot tokenini olganingizdan keyin, Render dashboardda "Environment Variables" bo'limiga qo'shing
 
-### GOOGLE_API_KEY  
+### GOOGLE_API_KEY (Majburiy)
 - Google AI Studio (aistudio.google.com) saytiga kiring
 - API key yarating
 - Bu keyni Render dashboardda "Environment Variables" bo'limiga qo'shing
+
+### TELEGRAM_CHANNEL_ID (Ixtiyoriy - Kanal posting uchun)
+- Telegram kanalingiz ID'sini yoki username'ini kiriting
+- Misol: @my_channel yoki -1001234567890
+- Bot kanalga admin sifatida qo'shilgan bo'lishi kerak
+
+### ADMIN_USER_IDS (Ixtiyoriy - Admin buyruqlar uchun)
+- Admin foydalanuvchilar ID'larini vergul bilan ajrating
+- Misol: 123456789,987654321
+- Bu ID'lar /channel_post va /set_channel buyruqlarini ishlata oladi
+
+### BOT_USERNAME (Ixtiyoriy - Post'larda ko'rsatish uchun)
+- Bot username'ini @ belgisisiz kiriting
+- Misol: my_bot_username
+- Kanal postlarida bot nomi ko'rsatiladi
 
 ## Render'da Deploy Qilish
 

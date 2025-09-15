@@ -16,6 +16,10 @@ import tempfile
 import asyncio
 from io import BytesIO
 from collections import defaultdict
+import random
+import datetime
+import json
+from datetime import timezone, timedelta
 
 # Import Telegram bot libraries (python-telegram-bot v20+)
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -43,6 +47,7 @@ user_image_context = defaultdict(dict)
 # Get API keys from Replit Secrets (environment variables)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+TELEGRAM_CHANNEL_ID = os.getenv('TELEGRAM_CHANNEL_ID', '@your_channel_username')
 
 # Configure Google Generative AI with the API key
 if GOOGLE_API_KEY:
@@ -50,6 +55,340 @@ if GOOGLE_API_KEY:
     logger.info("Google Generative AI configured successfully")
 else:
     logger.warning("GOOGLE_API_KEY not found in environment variables")
+
+
+# Nano Banana Tips and Content Database
+NANO_BANANA_TIPS = [
+    {
+        "title": "🍌 Nano Banana nima?",
+        "content": "Nano Banana - Google'ning Gemini 2.5 Flash Image Preview modeli. Bu eng yangi AI texnologiyasi bo'lib, bir necha soniyada ajoyib rasmlar yaratadi!",
+        "prompt_example": "/imagine chiroyli ko'k osmon va oq bulutlar",
+        "tip": "Oddiy so'zlar bilan ham ajoyib natijalar olishingiz mumkin!"
+    },
+    {
+        "title": "🎨 Rasm yaratish sirlari",
+        "content": "Nano Banana bilan mukammal rasm yaratish uchun batafsil tavsif bering. Ranglar, stil, ob-havo, his-tuyg'ularni tasvirlab bering.",
+        "prompt_example": "/imagine yashil o'rmon ichida kichik ariq, quyosh nurlari daraxt barglari orasidan tushmoqda, bahor faslida, tinch va osoyishta",
+        "tip": "Qancha ko'proq detallar - shuncha yaxshi natija!"
+    },
+    {
+        "title": "✨ Stil va uslublar",
+        "content": "Nano Banana turli xil rassom uslublarini taqlid qila oladi. Van Gogh, Picasso, anime, realistic va boshqa ko'plab stillar mavjud!",
+        "prompt_example": "/imagine mushuk Van Gogh uslubida",
+        "tip": "Sevimli rassomingiz uslubini sinab ko'ring!"
+    },
+    {
+        "title": "🏞️ Peyzaj rasmlari",
+        "content": "Nano Banana ajoyib peyzajlar yaratishda mohir. Tog'lar, dengizlar, o'rmonlar, shaharlar - barchasi mumkin!",
+        "prompt_example": "/imagine olov tog'i yonida tinch ko'l, yulduzli tun",
+        "tip": "Tabiat manzaralarida vaqt va ob-havoni ham ko'rsating!"
+    },
+    {
+        "title": "👥 Portret rasmlari",
+        "content": "Nano Banana odamlar, hayvonlar va fantastik mavjudotlarning ajoyib portretlarini yaratadi. Yuz ifodalari va hissiyotlarga alohida e'tibor bering.",
+        "prompt_example": "/imagine yosh qiz kulayotgan, baxtli, chiroyli ko'zlar",
+        "tip": "His-tuyg'ularni tasvirlab bering - kulgi, g'am, hayrat va boshqalar"
+    },
+    {
+        "title": "🔮 Fantastik dunyolar",
+        "content": "Nano Banana sizning tasavvuringizni haqiqatga aylantiradi. Sehrli dunyolar, ajdaholar, peri masallari - hamma narsa mumkin!",
+        "prompt_example": "/imagine sehrli qal'a bulutlar ustida, flying dragons",
+        "tip": "Xayolingizni erkin qo'yib bering - imkonsiz narsa yo'q!"
+    },
+    {
+        "title": "🎭 Rasm tahrirlash",
+        "content": "Mavjud rasmlarni Nano Banana bilan takomillashtirishingiz mumkin. /edit buyrug'i bilan rasmlarni o'zgartiring!",
+        "prompt_example": "Rasm yuboring va: /edit realistic qiling",
+        "tip": "Rasm yuborib keyin tahrirlash ko'rsatmasini bering!"
+    },
+    {
+        "title": "🌈 Ranglar bilan o'ynash",
+        "content": "Nano Banana ranglar palitrasida mohir. Issiq ranglar (qizil, sariq), sovuq ranglar (ko'k, yashil) yoki monoxrom uslubni sinang.",
+        "prompt_example": "/imagine gul bog'i faqat pushti va oq rangda",
+        "tip": "Rang sxemasini oldindan o'ylang - bu rasimga maxsus kayfiyat beradi!"
+    },
+    {
+        "title": "⚡ Tez natijalarga erishish",
+        "content": "Nano Banana juda tez ishlaydi! Bir necha soniyada professional darajadagi rasmlar olasiz.",
+        "prompt_example": "/imagine tez otlarda chevlar",
+        "tip": "Sabr qilishga hojat yo'q - natija darhol tayyor!"
+    },
+    {
+        "title": "🎪 Interaktiv rejim",
+        "content": "Nano Banana bilan suhbat quring! U sizning rasmlaringizni tahlil qiladi va takomillashtirish bo'yicha maslahat beradi.",
+        "prompt_example": "Rasm yuboring: 'Bu rasm haqida nima deyasiz?'",
+        "tip": "AI bilan suhbatlashib, san'at haqida yangi narsalarni o'rganing!"
+    }
+]
+
+
+# Global variables for channel management
+last_posted_tip_index = 0
+daily_post_task = None
+
+
+async def generate_daily_post() -> dict:
+    """
+    Generate a daily post about Nano Banana capabilities with image and text
+    
+    Returns:
+        dict: Contains 'text', 'image_prompt', and 'tip_data'
+    """
+    global last_posted_tip_index
+    
+    # Get next tip (cycling through all tips)
+    tip = NANO_BANANA_TIPS[last_posted_tip_index]
+    last_posted_tip_index = (last_posted_tip_index + 1) % len(NANO_BANANA_TIPS)
+    
+    # Create post text
+    post_text = f"""
+{tip['title']}
+
+{tip['content']}
+
+💡 <b>Maslahat:</b> {tip['tip']}
+
+🔥 <b>Sinab ko'ring:</b>
+<code>{tip['prompt_example']}</code>
+
+#NanoBanana #AI #RasmYaratish #Telegram
+#Bot: @{os.getenv('BOT_USERNAME', 'your_bot_username')}
+    """.strip()
+    
+    # Create image prompt for the post (related to the tip)
+    image_prompts = [
+        "futuristic AI brain with golden neural networks, digital art style",
+        "magical paintbrush creating colorful digital art in space",
+        "glowing banana-shaped AI chip floating in cyber space",
+        "artist robot painting on digital canvas, vibrant colors",
+        "cosmic art studio with floating paintbrushes and colors",
+        "neural network visualization with artistic elements",
+        "digital creativity explosion with AI elements",
+        "futuristic artist workspace with holographic displays",
+        "AI-powered art generator, sci-fi concept art",
+        "magical art creation process, fantasy digital art"
+    ]
+    
+    selected_prompt = random.choice(image_prompts)
+    
+    return {
+        'text': post_text,
+        'image_prompt': selected_prompt,
+        'tip_data': tip
+    }
+
+
+async def send_channel_post(bot, channel_id: str = None) -> bool:
+    """
+    Generate and send a daily post to Telegram channel
+    
+    Args:
+        bot: Telegram bot instance
+        channel_id: Channel ID or username (optional, uses default if not provided)
+        
+    Returns:
+        bool: Success status
+    """
+    try:
+        target_channel = channel_id or TELEGRAM_CHANNEL_ID
+        
+        # Generate post content
+        post_data = await generate_daily_post()
+        
+        # Generate image using Gemini
+        logger.info(f"Generating image for channel post with prompt: {post_data['image_prompt']}")
+        
+        if not GOOGLE_API_KEY:
+            logger.error("Cannot generate channel post: Google API key not configured")
+            return False
+        
+        model = genai.GenerativeModel('gemini-2.5-flash-image-preview')
+        
+        # Use asyncio executor to avoid blocking
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: model.generate_content(post_data['image_prompt'])
+        )
+        
+        # Extract image data
+        image_data = None
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if hasattr(part, 'inline_data') and part.inline_data:
+                        if hasattr(part.inline_data, 'data'):
+                            raw_data = part.inline_data.data
+                            if isinstance(raw_data, str):
+                                image_data = base64.b64decode(raw_data)
+                            else:
+                                image_data = raw_data
+                            break
+        
+        if not image_data:
+            logger.error("Failed to generate image for channel post")
+            return False
+        
+        # Save image to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
+            temp_file.write(image_data)
+            temp_file_path = temp_file.name
+        
+        # Send to channel
+        try:
+            with open(temp_file_path, 'rb') as image_file:
+                await bot.send_photo(
+                    chat_id=target_channel,
+                    photo=image_file,
+                    caption=post_data['text'],
+                    parse_mode='HTML'
+                )
+            
+            logger.info(f"Successfully sent daily post to channel {target_channel}")
+            return True
+            
+        except TelegramError as e:
+            logger.error(f"Failed to send post to channel: {e}")
+            return False
+        
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(temp_file_path)
+            except OSError as e:
+                logger.warning(f"Failed to delete temporary file: {e}")
+                
+    except Exception as e:
+        logger.error(f"Error in send_channel_post: {e}", exc_info=True)
+        return False
+
+
+async def daily_post_callback(context) -> None:
+    """
+    Callback function for scheduled daily posts
+    """
+    try:
+        success = await send_channel_post(context.bot)
+        if success:
+            logger.info("Scheduled channel post sent successfully")
+        else:
+            logger.error("Failed to send scheduled channel post")
+    except Exception as e:
+        logger.error(f"Error in daily post callback: {e}", exc_info=True)
+
+
+def setup_daily_posting(application):
+    """
+    Set up daily posting using JobQueue
+    """
+    if not TELEGRAM_CHANNEL_ID or TELEGRAM_CHANNEL_ID == '@your_channel_username':
+        logger.info("Channel posting disabled - TELEGRAM_CHANNEL_ID not set")
+        return
+    
+    # Tashkent timezone (UTC+5)
+    tashkent_tz = timezone(timedelta(hours=5))
+    
+    # Schedule posts at 9:00, 14:00, and 18:00 Tashkent time
+    post_times = [
+        datetime.time(hour=9, minute=0, tzinfo=tashkent_tz),   # 9 AM
+        datetime.time(hour=14, minute=0, tzinfo=tashkent_tz),  # 2 PM  
+        datetime.time(hour=18, minute=0, tzinfo=tashkent_tz),  # 6 PM
+    ]
+    
+    job_queue = application.job_queue
+    
+    for i, post_time in enumerate(post_times):
+        job_queue.run_daily(
+            callback=daily_post_callback,
+            time=post_time,
+            name=f"daily_post_{i+1}"
+        )
+        logger.info(f"Scheduled daily post at {post_time.strftime('%H:%M')} Tashkent time")
+    
+    logger.info(f"Daily channel posting enabled for: {TELEGRAM_CHANNEL_ID}")
+
+
+async def channel_post_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Admin command to manually send a channel post
+    """
+    if not update.message:
+        return
+    
+    try:
+        # Check if user is admin (you can add admin user IDs here)
+        admin_users = [int(uid) for uid in os.getenv('ADMIN_USER_IDS', '').split(',') if uid.strip()]
+        
+        if update.effective_user and update.effective_user.id in admin_users:
+            status_message = await update.message.reply_text("📢 Kanal postini yaratib yuboryapman...")
+            
+            success = await send_channel_post(context.application.bot)
+            
+            if success:
+                await status_message.edit_text("✅ Kanal postini muvaffaqiyatli yubordim!")
+            else:
+                await status_message.edit_text("❌ Kanal postini yuborishda xatolik yuz berdi.")
+        else:
+            await update.message.reply_text("❌ Sizda bu buyruqni ishlatish huquqi yo'q.")
+            
+    except Exception as e:
+        logger.error(f"Error in channel_post_command: {e}")
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
+
+
+async def set_channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Admin command to set channel ID
+    """
+    if not update.message:
+        return
+    
+    try:
+        admin_users = [int(uid) for uid in os.getenv('ADMIN_USER_IDS', '').split(',') if uid.strip()]
+        
+        if update.effective_user and update.effective_user.id in admin_users:
+            if not context.args:
+                await update.message.reply_text(
+                    "❌ Kanal ID yoki username kiriting.\n"
+                    "Misol: /set_channel @my_channel\n"
+                    "yoki: /set_channel -1001234567890"
+                )
+                return
+                
+            channel_id = context.args[0]
+            
+            # Test sending to the channel
+            test_message = "🧪 Test: Bot kanal bilan bog'landi!"
+            
+            try:
+                await context.application.bot.send_message(
+                    chat_id=channel_id,
+                    text=test_message
+                )
+                
+                # If successful, save to environment (for current session)
+                os.environ['TELEGRAM_CHANNEL_ID'] = channel_id
+                global TELEGRAM_CHANNEL_ID
+                TELEGRAM_CHANNEL_ID = channel_id
+                
+                await update.message.reply_text(
+                    f"✅ Kanal muvaffaqiyatli sozlandi: {channel_id}\n"
+                    f"Test xabar yuborildi!"
+                )
+                
+            except TelegramError as e:
+                await update.message.reply_text(
+                    f"❌ Kanalni sozlashda xatolik: {e}\n"
+                    "Botni kanalga admin qilib qo'shing va qayta urinib ko'ring."
+                )
+                
+        else:
+            await update.message.reply_text("❌ Sizda bu buyruqni ishlatish huquqi yo'q.")
+            
+    except Exception as e:
+        logger.error(f"Error in set_channel_command: {e}")
+        await update.message.reply_text("❌ Xatolik yuz berdi.")
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1228,6 +1567,10 @@ def main() -> None:
     # /interactive command - conversational image refinement
     application.add_handler(CommandHandler("interactive", interactive_mode))
     
+    # Channel management commands (Admin only)
+    application.add_handler(CommandHandler("channel_post", channel_post_command))
+    application.add_handler(CommandHandler("set_channel", set_channel_command))
+    
     # Callback query handler - handle inline keyboard button clicks
     application.add_handler(CallbackQueryHandler(handle_callback_query))
     
@@ -1240,10 +1583,14 @@ def main() -> None:
     # Add error handler to handle and log errors gracefully
     application.add_error_handler(error_handler)
     
+    # Set up daily channel posting using JobQueue
+    setup_daily_posting(application)
+    
     # Log that the bot is starting
     logger.info("🤖 Telegram Image Generation Bot is starting...")
     print("🚀 Bot is starting... Press Ctrl+C to stop.")
     print("💡 Make sure you have set TELEGRAM_BOT_TOKEN and GOOGLE_API_KEY in Replit Secrets")
+    print("📢 Channel posting: " + ("ENABLED" if TELEGRAM_CHANNEL_ID != '@your_channel_username' else "DISABLED"))
     
     # Start the bot and keep it running until interrupted
     # This enables the bot to receive and respond to messages
