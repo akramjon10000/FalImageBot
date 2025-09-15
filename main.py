@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 # Import Telegram bot libraries (python-telegram-bot v20+)
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.error import TelegramError
 
 # Import Google Generative AI library for image generation
@@ -66,12 +66,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         
     # Prepare welcome message with bot description and usage instructions
     welcome_message = (
-        "🎨 Welcome to the AI Image Generator Bot!\n\n"
-        "I can create amazing images from your text descriptions using Google's Gemini AI.\n\n"
-        "📝 How to use:\n"
-        "• Send /imagine followed by your image description\n"
-        "• Example: /imagine a beautiful sunset over mountains\n\n"
-        "🚀 Start creating your images now!"
+        "🎨 AI Rasm Generatori Botiga Xush Kelibsiz!\n\n"
+        "Men Google'ning Gemini AI yordamida ajoyib rasmlar yarata olaman.\n\n"
+        "📝 Qanday ishlatish:\n"
+        "• /imagine [tavsif] - yangi rasm yaratish\n"
+        "• /edit [tavsif] - rasm yuboring va uni qanday o'zgartirishni ayting\n\n"
+        "Misollar:\n"
+        "• /imagine daraxtda sigir chiqib olgan\n"
+        "• Rasm yuboring va /edit realistic qiling\n\n"
+        "🚀 Endi rasmlarni yaratishni boshlang!"
     )
     
     try:
@@ -269,6 +272,205 @@ async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Unexpected error in imagine command: {e}", exc_info=True)
 
 
+async def edit_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /edit command - edit an image based on user's description
+    
+    User should send an image with caption /edit [description] or send /edit [description] 
+    as a reply to an image message.
+    
+    Args:
+        update: Telegram update object containing the message
+        context: Telegram context containing command arguments
+    """
+    if not update.message:
+        return
+    
+    status_message = None
+    
+    try:
+        # Extract the editing instructions from command arguments
+        if not context.args:
+            instruction_message = (
+                "📝 Rasm tahrirlash uchun:\n\n"
+                "1. Rasmni yuboring va caption sifatida: /edit [tavsif]\n"
+                "2. Yoki avval rasmni yuboring, keyin /edit [tavsif] yozing\n\n"
+                "Misol: /edit realistic qiling\n"
+                "Misol: /edit rangi qizil qiling"
+            )
+            await update.message.reply_text(instruction_message)
+            return
+        
+        # Join all arguments to form the editing instruction
+        edit_instruction = ' '.join(context.args)
+        
+        # Check if there's an image in the current message
+        photo = None
+        if update.message.photo:
+            photo = update.message.photo[-1]  # Get the highest resolution photo
+        elif update.message.reply_to_message and update.message.reply_to_message.photo:
+            photo = update.message.reply_to_message.photo[-1]
+        
+        if not photo:
+            error_message = (
+                "❌ Rasm topilmadi!\n\n"
+                "Iltimos:\n"
+                "• Rasm yuboring va caption sifatida /edit [tavsif] yozing\n"
+                "• Yoki rasmga javob sifatida /edit [tavsif] yozing"
+            )
+            await update.message.reply_text(error_message)
+            return
+        
+        # Log the image editing request
+        if update.effective_user:
+            logger.info(f"User {update.effective_user.id} requested image editing with instruction: '{edit_instruction}'")
+        
+        # Send status message
+        editing_message = "🔄 Rasmni tahrirlayapman, iltimos kuting..."
+        try:
+            status_message = await update.message.reply_text(editing_message)
+        except TelegramError as e:
+            logger.error(f"Failed to send status message: {e}")
+        
+        # Check if Google API key is configured
+        if not GOOGLE_API_KEY:
+            error_msg = "❌ Google API key sozlanmagan. Bot administratori bilan bog'laning."
+            if status_message:
+                await status_message.edit_text(error_msg)
+            else:
+                await update.message.reply_text(error_msg)
+            logger.error("Attempted image editing without Google API key")
+            return
+        
+        # Download the image from Telegram
+        file = await photo.get_file()
+        image_bytes = await file.download_as_bytearray()
+        
+        logger.info("Image downloaded from Telegram successfully")
+        
+        # Initialize the Gemini model for image editing
+        model = genai.GenerativeModel('gemini-2.5-flash-image-preview')
+        
+        # Create the image part for Gemini
+        image_part = {
+            "mime_type": "image/jpeg",
+            "data": base64.b64encode(image_bytes).decode('utf-8')
+        }
+        
+        # Create the prompt for image editing
+        editing_prompt = f"Bu rasmni tahrirlang: {edit_instruction}"
+        
+        # Generate edited image using Google Gemini AI
+        logger.info(f"Sending image editing request to Google Gemini AI")
+        
+        # Use asyncio executor to avoid blocking the event loop
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(
+            None, 
+            lambda: model.generate_content([editing_prompt, image_part])
+        )
+        
+        # Process the response and extract image data
+        image_data = None
+        image_saved = False
+        
+        # Check if the response contains candidates (generated content)
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            
+            # Iterate through all parts of the response
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    # Check if this part contains inline image data
+                    if hasattr(part, 'inline_data') and part.inline_data:
+                        # Check if the data is base64 encoded or raw bytes
+                        if hasattr(part.inline_data, 'data'):
+                            raw_data = part.inline_data.data
+                            # If data is string (base64), decode it
+                            if isinstance(raw_data, str):
+                                image_data = base64.b64decode(raw_data)
+                            else:
+                                image_data = raw_data
+                            logger.info("Successfully extracted edited image data from Gemini response")
+                            break
+                    # Log any text responses from the model
+                    elif hasattr(part, 'text') and part.text:
+                        logger.info(f"Gemini text response: {part.text}")
+        
+        # If no image data was found in the response
+        if not image_data:
+            error_msg = "❌ Rasmni tahrirlashda xatolik yuz berdi. Iltimos qayta urinib ko'ring."
+            if status_message:
+                await status_message.edit_text(error_msg)
+            else:
+                await update.message.reply_text(error_msg)
+            logger.error(f"No image data found in Gemini editing response. Response structure: {[type(part).__name__ for part in candidate.content.parts] if candidate.content and candidate.content.parts else 'No parts'}")
+            return
+        
+        # Save the edited image to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as temp_file:
+            temp_file.write(image_data)
+            temp_file_path = temp_file.name
+            image_saved = True
+            logger.info(f"Edited image saved to temporary file: {temp_file_path}")
+        
+        # Delete the status message since we're about to send the image
+        if status_message:
+            try:
+                await status_message.delete()
+            except TelegramError as e:
+                logger.warning(f"Could not delete status message: {e}")
+        
+        # Send the edited image to the user
+        try:
+            with open(temp_file_path, 'rb') as image_file:
+                await update.message.reply_photo(
+                    photo=image_file,
+                    caption=f"✨ Tahrirlangan rasm: \"{edit_instruction}\""
+                )
+            
+            logger.info(f"Successfully sent edited image to user {update.effective_user.id if update.effective_user else 'unknown'}")
+            
+        except TelegramError as e:
+            # If sending the image fails, try to send an error message
+            error_msg = "❌ Tahrirlangan rasmni yuborishda xatolik yuz berdi. Iltimos qayta urinib ko'ring."
+            try:
+                await update.message.reply_text(error_msg)
+            except TelegramError:
+                pass
+            logger.error(f"Failed to send edited image: {e}")
+        
+        finally:
+            # Clean up: remove the temporary file
+            if image_saved:
+                try:
+                    os.unlink(temp_file_path)
+                    logger.info("Temporary edited image file cleaned up")
+                except OSError as e:
+                    logger.warning(f"Failed to delete temporary file: {e}")
+    
+    except Exception as e:
+        # Handle any unexpected errors during image editing
+        error_msg = "❌ Rasmni tahrirlashda kutilmagan xatolik yuz berdi. Iltimos qayta urinib ko'ring."
+        
+        # Try to update status message or send new error message
+        if status_message:
+            try:
+                await status_message.edit_text(error_msg)
+            except TelegramError:
+                try:
+                    await update.message.reply_text(error_msg)
+                except TelegramError:
+                    pass
+        else:
+            try:
+                await update.message.reply_text(error_msg)
+            except TelegramError:
+                pass
+        
+        logger.error(f"Unexpected error in edit_image command: {e}", exc_info=True)
+
+
 def main() -> None:
     """
     Main function to initialize and start the Telegram bot
@@ -302,6 +504,9 @@ def main() -> None:
     
     # /imagine command - image generation from text prompt
     application.add_handler(CommandHandler("imagine", imagine))
+    
+    # /edit command - image editing based on user instructions
+    application.add_handler(CommandHandler("edit", edit_image))
     
     # Log that the bot is starting
     logger.info("🤖 Telegram Image Generation Bot is starting...")
