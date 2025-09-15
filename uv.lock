@@ -531,7 +531,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "google-generativeai", specifier = "~=0.8" },
-    { name = "python-telegram-bot", specifier = "~=22.4" },
+    { name = "python-telegram-bot", specifier = "==22.4" },
     { name = "telegram", specifier = ">=0.0.1" },
 ]
 

@@ -1,5 +1,5 @@
 google-generativeai~=0.8
-python-telegram-bot~=22.4
+python-telegram-bot==22.4
 telegram>=0.0.1
 
 [dev]
