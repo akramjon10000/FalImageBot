@@ -25,6 +25,7 @@ from datetime import timezone, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from telegram.error import TelegramError
+import telegram.error
 
 # Import Google Generative AI library for image generation
 import google.generativeai as genai
@@ -1600,7 +1601,17 @@ def main() -> None:
     # Start the bot and keep it running until interrupted
     # This enables the bot to receive and respond to messages
     # drop_pending_updates=True clears any pending updates to prevent conflicts
-    application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    try:
+        application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    except telegram.error.Conflict as e:
+        logger.error(f"Bot conflict detected: {e}")
+        logger.error("Another bot instance is running with the same token!")
+        logger.error("Please ensure only one instance is running or rotate the bot token.")
+        print("❌ CONFLICT: Another bot instance is running with the same token!")
+        print("🔄 To fix this:")
+        print("   1. Stop any other deployments (Render, Heroku, etc.)")
+        print("   2. Or rotate your bot token via @BotFather and update it here")
+        exit(1)
 
 
 # Entry point - run the bot when script is executed directly

@@ -69,8 +69,23 @@ The application implements comprehensive logging using Python's built-in logging
 - **Environment Configuration**: Set up API keys (TELEGRAM_BOT_TOKEN, GOOGLE_API_KEY) via Replit Secrets
 - **Workflow Setup**: Configured Bot workflow to run main.py continuously
 - **Deployment**: Configured for VM deployment to maintain persistent bot operation
-- **Single Instance Policy**: Bot configured to run as single instance to avoid Telegram polling conflicts
-- **Status**: Bot is connecting to both Telegram and Google AI APIs successfully and running without errors
+- **Conflict Handling**: Added improved error handling for Telegram bot conflicts
+- **Status**: Setup complete but bot has conflict with another instance running elsewhere
+
+## Critical Issue: Bot Token Conflict
+⚠️ **IMPORTANT**: The bot cannot run properly because another instance is using the same bot token (likely on Render based on render.yaml file).
+
+**To fix this conflict, choose ONE of these options:**
+1. **Rotate Bot Token**: 
+   - Go to Telegram @BotFather
+   - Send `/revoke` then `/token` to get a new token
+   - Update only this Replit's TELEGRAM_BOT_TOKEN secret with the new token
+   
+2. **Stop Other Deployments**:
+   - Check Render dashboard and stop/suspend the telegram-image-bot service
+   - Remove TELEGRAM_BOT_TOKEN from other environments
+   
+**Until resolved**: The bot will show conflict errors and cannot serve users reliably.
 
 ## Previous - Channel Posting System Complete
 - **Channel Posting Feature**: Added automated daily posting system with AI-generated images and educational content
