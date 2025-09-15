@@ -2,6 +2,7 @@ services:
   - type: background_worker
     name: telegram-image-bot
     env: python
+    plan: starter
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     envVars:
@@ -9,3 +10,6 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
+    scaling:
+      minInstances: 1
+      maxInstances: 1
