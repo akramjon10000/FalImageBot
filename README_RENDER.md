@@ -17,10 +17,26 @@ Render dashboardda quyidagi environment variablelarni sozlang:
 
 ## Render'da Deploy Qilish
 
+### Avtomatik Deploy (render.yaml bilan)
 1. GitHub/GitLab repositoriyangizni Render'ga ulang
-2. Service type sifatida "Background Worker" tanlang
-3. Environment variables qo'shing
+2. render.yaml fayli avtomatik taniladi
+3. Environment variables qo'shing:
+   - TELEGRAM_BOT_TOKEN
+   - GOOGLE_API_KEY
 4. Deploy qiling
+
+### Manual Deploy
+1. GitHub/GitLab repositoriyangizni Render'ga ulang
+2. Service type sifatida "Worker" tanlang
+3. Build Command: `pip install -r requirements.txt`
+4. Start Command: `python main.py`
+5. Environment variables qo'shing
+6. Deploy qiling
+
+### Muhim Eslatmalar
+- Service type "Worker" bo'lishi kerak (web service emas)
+- Bot 24/7 ishlab turishi uchun Starter plan yoki undan yuqori kerak
+- Environment variables to'g'ri sozlanganligini tekshiring
 
 ## Fayllar
 

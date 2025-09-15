@@ -1,5 +1,5 @@
 services:
-  - type: background_worker
+  - type: worker
     name: telegram-image-bot
     env: python
     plan: starter
@@ -11,5 +11,5 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
     scaling:
-      minInstances: 1
-      maxInstances: 1
+      numInstances: 1
+    autoDeploy: true
