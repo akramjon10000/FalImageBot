@@ -1,3 +1,4 @@
+main.py
 pyproject.toml
 telegram_image_bot.egg-info/PKG-INFO
 telegram_image_bot.egg-info/SOURCES.txt
