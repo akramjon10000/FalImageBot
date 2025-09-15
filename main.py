@@ -15,7 +15,6 @@ import logging
 import tempfile
 import asyncio
 from io import BytesIO
-from dotenv import load_dotenv
 from collections import defaultdict
 
 # Import Telegram bot libraries (python-telegram-bot v20+)
@@ -26,9 +25,6 @@ from telegram.error import TelegramError
 # Import Google Generative AI library for image generation
 import google.generativeai as genai
 import base64
-
-# Load environment variables from .env file (if exists)
-load_dotenv()
 
 # Configure logging to track bot operations and errors
 logging.basicConfig(

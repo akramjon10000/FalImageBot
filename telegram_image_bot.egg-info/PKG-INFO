@@ -3,8 +3,6 @@ Name: telegram-image-bot
 Version: 1.0.0
 Summary: Telegram bot for AI image generation using Google Generative AI (Gemini)
 Requires-Python: >=3.11
-Requires-Dist: python-telegram-bot~=22.4
 Requires-Dist: google-generativeai~=0.8
-Requires-Dist: python-dotenv~=1.1
-Requires-Dist: telegram>=0.0.1
+Requires-Dist: python-telegram-bot~=22.4
 Provides-Extra: dev
