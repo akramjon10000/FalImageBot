@@ -1164,6 +1164,17 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         )
 
 
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle errors that occur during bot operation
+    
+    Args:
+        update: The update that caused the error (may be None)
+        context: The context containing error information
+    """
+    logger.error(f"Update {update} caused error {context.error}", exc_info=context.error)
+
+
 def main() -> None:
     """
     Main function to initialize and start the Telegram bot
@@ -1171,8 +1182,9 @@ def main() -> None:
     This function:
     1. Validates that required API keys are available
     2. Creates the Telegram Application instance
-    3. Registers command handlers for /start and /imagine
-    4. Starts the bot in polling mode to listen for messages
+    3. Clears any existing webhooks to prevent conflicts
+    4. Registers command handlers and error handler
+    5. Starts the bot in polling mode to listen for messages
     """
     # Check if the Telegram Bot Token is available
     if not TELEGRAM_BOT_TOKEN:
@@ -1225,6 +1237,9 @@ def main() -> None:
     # Text message handler - handle image-related commands when user has sent an image
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_image_command))
     
+    # Add error handler to handle and log errors gracefully
+    application.add_error_handler(error_handler)
+    
     # Log that the bot is starting
     logger.info("🤖 Telegram Image Generation Bot is starting...")
     print("🚀 Bot is starting... Press Ctrl+C to stop.")
@@ -1232,7 +1247,8 @@ def main() -> None:
     
     # Start the bot and keep it running until interrupted
     # This enables the bot to receive and respond to messages
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # drop_pending_updates=True clears any pending updates to prevent conflicts
+    application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 
 # Entry point - run the bot when script is executed directly

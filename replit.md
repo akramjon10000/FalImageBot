@@ -44,21 +44,28 @@ The application implements comprehensive logging using Python's built-in logging
 - **Service**: Telegram Bot API
 - **Purpose**: Core bot functionality and message handling
 - **Library**: python-telegram-bot (v22.4)
-- **Authentication**: Bot token via environment variable
+- **Authentication**: Bot token via environment variable (TELEGRAM_BOT_TOKEN)
+- **Setup**: Configured and working in Replit environment
 
-## Fal.ai Image Generation Service
-- **Service**: Fal.ai Stable Diffusion API
-- **Purpose**: AI-powered image generation from text prompts
-- **Endpoint**: https://queue.fal.run/fal-ai/stable-diffusion-v15
-- **Authentication**: API key via Authorization header
-- **Integration Pattern**: Queue-based with polling for completion
-
-## HTTP Client Libraries
-- **aiohttp**: Asynchronous HTTP client for API requests (v3.12.15+)
-- **python-dotenv**: Environment variable management for configuration (v1.0.0+)
+## Google Generative AI (Gemini)
+- **Service**: Google Gemini AI (Gemini 2.5 Flash Image Preview)
+- **Purpose**: AI-powered image generation and editing from text prompts
+- **Library**: google-generativeai (v0.8.5)
+- **Authentication**: API key via environment variable (GOOGLE_API_KEY)
+- **Setup**: Configured and working in Replit environment
 
 ## Python Runtime Dependencies
 - **asyncio**: Built-in Python asynchronous programming support
 - **logging**: Built-in Python logging framework
+- **tempfile**: Temporary file handling for image processing
+- **base64**: Image data encoding/decoding
 - **os**: Environment variable access
-- **json**: JSON data handling for API communications
+
+# Recent Changes
+
+## September 15, 2025
+- Successfully imported GitHub project to Replit environment
+- Fixed dependency installation issues with python-telegram-bot
+- Configured API keys (TELEGRAM_BOT_TOKEN and GOOGLE_API_KEY) via Replit Secrets
+- Verified bot functionality - successfully starts and connects to both Telegram and Google AI APIs
+- Bot workflow is running and ready to receive user commands
