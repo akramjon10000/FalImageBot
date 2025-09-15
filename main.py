@@ -18,8 +18,8 @@ from io import BytesIO
 from collections import defaultdict
 
 # Import Telegram bot libraries (python-telegram-bot v20+)
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from telegram.error import TelegramError
 
 # Import Google Generative AI library for image generation
@@ -54,7 +54,7 @@ else:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Handle the /start command - send welcome message with usage instructions
+    Handle the /start command - send welcome message with inline keyboard buttons
     
     Args:
         update: Telegram update object containing the message
@@ -64,28 +64,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
         
-    # Prepare welcome message with bot description and usage instructions
+    # Prepare welcome message with bot description
     welcome_message = (
         "🎨 AI Rasm Generatori Botiga Xush Kelibsiz!\n\n"
         "Men Google'ning Nano Banana (Gemini 2.5 Flash Image) AI'si bilan ajoyib rasmlar yarata olaman!\n\n"
-        "🎯 Barcha funksiyalar:\n"
-        "• /imagine [tavsif] - yangi rasm yaratish\n"
-        "• /edit [tavsif] - rasm tahrirlash\n"
-        "• /compose - bir nechta rasmni birlashtirish\n"
-        "• /style - stil uzatish\n"
-        "• /text [matn] - matn bilan rasm yaratish\n"
-        "• /recipe [taom] - retsept yaratish\n"
-        "• /interactive - suhbat rejimi\n\n"
-        "📱 Misollar:\n"
-        "• /imagine daraxtda sigir chiqib olgan\n"
-        "• /text HELLO rasmda yozing\n"
-        "• /recipe osh\n\n"
-        "🚀 Endi rasmlarni yaratishni boshlang!"
+        "Quyidagi tugmalardan birini tanlang:"
     )
     
+    # Create inline keyboard with main functions
+    keyboard = [
+        [
+            InlineKeyboardButton("🎨 Rasm Yaratish", callback_data="imagine"),
+            InlineKeyboardButton("✏️ Rasm Tahrirlash", callback_data="edit")
+        ],
+        [
+            InlineKeyboardButton("🔤 Matn + Rasm", callback_data="text"),
+            InlineKeyboardButton("👨‍🍳 Retsept", callback_data="recipe")
+        ],
+        [
+            InlineKeyboardButton("🎭 Stil Uzatish", callback_data="style"),
+            InlineKeyboardButton("📐 Rasm Birlashtirish", callback_data="compose")
+        ],
+        [
+            InlineKeyboardButton("💬 Interaktiv Rejim", callback_data="interactive"),
+            InlineKeyboardButton("ℹ️ Yordam", callback_data="help")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     try:
-        # Send the welcome message to the user
-        await update.message.reply_text(welcome_message)
+        # Send the welcome message with inline keyboard
+        await update.message.reply_text(welcome_message, reply_markup=reply_markup)
         
         # Log the user interaction for monitoring
         if update.effective_user:
@@ -1073,6 +1082,88 @@ async def handle_image_command(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.error(f"Unexpected error in handle_image_command: {e}", exc_info=True)
 
 
+async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle inline keyboard button clicks
+    
+    Args:
+        update: Telegram update object containing the callback query
+        context: Telegram context for the current conversation
+    """
+    query = update.callback_query
+    
+    # Acknowledge the callback query
+    await query.answer()
+    
+    # Get the callback data (which button was pressed)
+    action = query.data
+    
+    if action == "imagine":
+        await query.edit_message_text(
+            "🎨 Rasm yaratish uchun:\n\n"
+            "Iltimos, yaratmoqchi bo'lgan rasmning tavsifini yozing.\n\n"
+            "Misol: /imagine daraxtda sigir chiqib olgan\n"
+            "Yoki shunchaki: daraxtda sigir chiqib olgan"
+        )
+    elif action == "edit":
+        await query.edit_message_text(
+            "✏️ Rasm tahrirlash uchun:\n\n"
+            "1. Avval rasmni yuboring\n"
+            "2. Keyin tahrirlash ko'rsatmasini yozing\n\n"
+            "Misol: /edit realistik qiling\n"
+            "Yoki: rasmni realistik qiling"
+        )
+    elif action == "text":
+        await query.edit_message_text(
+            "🔤 Matn bilan rasm yaratish uchun:\n\n"
+            "Iltimos, matn va rasm tavsifini yozing.\n\n"
+            "Misol: /text HELLO rasmda yozing\n"
+            "Yoki: HELLO matnini rasmda ko'rsating"
+        )
+    elif action == "recipe":
+        await query.edit_message_text(
+            "👨‍🍳 Retsept yaratish uchun:\n\n"
+            "Taom nomini yozing, men retseptini yarataman.\n\n"
+            "Misol: /recipe osh\n"
+            "Yoki: palov retsepti"
+        )
+    elif action == "style":
+        await query.edit_message_text(
+            "🎭 Stil uzatish uchun:\n\n"
+            "1. Asosiy rasmni yuboring\n"
+            "2. Qanday stil berish kerakligini yozing\n\n"
+            "Misol: /style Van Gogh uslubida\n"
+            "Yoki: rasmni Van Gogh uslubida qiling"
+        )
+    elif action == "compose":
+        await query.edit_message_text(
+            "📐 Rasm birlashtirish uchun:\n\n"
+            "1. Bir nechta rasm yuboring\n"
+            "2. Qanday birlashtirishni yozing\n\n"
+            "Misol: /compose bitta rasm qiling\n"
+            "Yoki: bu rasmlarni birlashtiring"
+        )
+    elif action == "interactive":
+        await query.edit_message_text(
+            "💬 Interaktiv rejim:\n\n"
+            "Bu rejimda men sizning rasmlaringizni takomillashtiraman.\n\n"
+            "Misol: /interactive\n"
+            "Keyin rasm yuboring va men takomillashtiraman."
+        )
+    elif action == "help":
+        await query.edit_message_text(
+            "ℹ️ Yordam va Ko'rsatmalar:\n\n"
+            "🎨 Rasm yaratish: /imagine [tavsif]\n"
+            "✏️ Rasm tahrirlash: /edit [ko'rsatma]\n"
+            "🔤 Matn + Rasm: /text [matn]\n"
+            "👨‍🍳 Retsept: /recipe [taom]\n"
+            "🎭 Stil uzatish: /style [stil]\n"
+            "📐 Birlashtirish: /compose [tavsif]\n"
+            "💬 Interaktiv: /interactive\n\n"
+            "Qaytish uchun /start ni bosing."
+        )
+
+
 def main() -> None:
     """
     Main function to initialize and start the Telegram bot
@@ -1124,6 +1215,9 @@ def main() -> None:
     
     # /interactive command - conversational image refinement
     application.add_handler(CommandHandler("interactive", interactive_mode))
+    
+    # Callback query handler - handle inline keyboard button clicks
+    application.add_handler(CallbackQueryHandler(handle_callback_query))
     
     # Photo handler - when user sends an image, analyze and ask what to do
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
