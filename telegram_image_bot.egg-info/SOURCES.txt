@@ -1,0 +1,6 @@
+pyproject.toml
+telegram_image_bot.egg-info/PKG-INFO
+telegram_image_bot.egg-info/SOURCES.txt
+telegram_image_bot.egg-info/dependency_links.txt
+telegram_image_bot.egg-info/requires.txt
+telegram_image_bot.egg-info/top_level.txt
