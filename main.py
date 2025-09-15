@@ -315,19 +315,28 @@ async def edit_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         # Join all arguments to form the editing instruction
         edit_instruction = ' '.join(context.args)
         
+        user_id = update.effective_user.id if update.effective_user else None
+        
         # Check if there's an image in the current message
         photo = None
+        image_bytes = None
+        
         if update.message.photo:
             photo = update.message.photo[-1]  # Get the highest resolution photo
         elif update.message.reply_to_message and update.message.reply_to_message.photo:
             photo = update.message.reply_to_message.photo[-1]
+        elif user_id and user_id in user_image_context and 'image_data' in user_image_context[user_id]:
+            # Use stored image context
+            image_bytes = user_image_context[user_id]['image_data']
+            logger.info(f"Using stored image context for user {user_id}")
         
-        if not photo:
+        if not photo and not image_bytes:
             error_message = (
                 "❌ Rasm topilmadi!\n\n"
                 "Iltimos:\n"
                 "• Rasm yuboring va caption sifatida /edit [tavsif] yozing\n"
-                "• Yoki rasmga javob sifatida /edit [tavsif] yozing"
+                "• Yoki rasmga javob sifatida /edit [tavsif] yozing\n"
+                "• Yoki avval rasm yuboring, keyin /edit buyruqini ishlating"
             )
             await update.message.reply_text(error_message)
             return
@@ -353,9 +362,10 @@ async def edit_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             logger.error("Attempted image editing without Google API key")
             return
         
-        # Download the image from Telegram
-        file = await photo.get_file()
-        image_bytes = await file.download_as_bytearray()
+        # Download the image from Telegram if we don't have it from context
+        if not image_bytes:
+            file = await photo.get_file()
+            image_bytes = await file.download_as_bytearray()
         
         logger.info("Image downloaded from Telegram successfully")
         
@@ -960,19 +970,27 @@ async def handle_image_command(update: Update, context: ContextTypes.DEFAULT_TYP
             prompt = "Bu rasmni batafsil tahlil qiling. Ranglar, obyektlar, kompozitsiya, kayfiyat va boshqa muhim xususiyatlar haqida to'liq ma'lumot bering."
             
         elif any(word in user_text for word in ['tahrir', 'edit', 'o\'zgartir', 'ozgartir']):
-            # Image editing request
-            status_message = await update.message.reply_text("🔄 Rasm tahrirlash uchun yo'l-yo'riq...")
+            # Image editing request - try to extract editing instruction from text
+            status_message = await update.message.reply_text("🔄 Rasmni tahrirlashga tayyorlanaman...")
             
-            # For editing, we guide the user to use specific editing commands
-            edit_guide = (
-                "📝 **Rasm tahrirlash uchun:**\n\n"
-                "• `/edit [tavsif]` - rasmni tahrirlash\n"
-                "• Misol: `/edit realistic qiling`\n"
-                "• Misol: `/edit rang qizil qiling`\n\n"
-                "💡 Rasmingizni saqlagan holda `/edit` buyruqini ishlating!"
-            )
+            # Try to extract editing instruction from the text
+            edit_instruction = user_text.replace('tahrir', '').replace('edit', '').replace('o\'zgartir', '').replace('ozgartir', '').strip()
             
-            await status_message.edit_text(edit_guide, parse_mode='Markdown')
+            if not edit_instruction:
+                edit_instruction = "realistic va chiroyli qiling"  # Default instruction
+            
+            # Simulate context.args for the edit_image function
+            context.args = edit_instruction.split()
+            
+            # Delete status message and call the edit function
+            if status_message:
+                try:
+                    await status_message.delete()
+                except TelegramError as e:
+                    logger.warning(f"Could not delete status message: {e}")
+            
+            # Call the existing edit_image function which now supports image context
+            await edit_image(update, context)
             return
             
         elif any(word in user_text for word in ['matn', 'text', 'o\'qi', 'oqi', 'yoz']):
