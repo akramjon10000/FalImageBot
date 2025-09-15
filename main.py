@@ -289,11 +289,16 @@ def setup_daily_posting(application):
     # Tashkent timezone (UTC+5)
     tashkent_tz = timezone(timedelta(hours=5))
     
-    # Schedule posts at 9:00, 14:00, and 18:00 Tashkent time
+    # Schedule 8 posts throughout the day at Tashkent time
     post_times = [
-        datetime.time(hour=9, minute=0, tzinfo=tashkent_tz),   # 9 AM
-        datetime.time(hour=14, minute=0, tzinfo=tashkent_tz),  # 2 PM  
-        datetime.time(hour=18, minute=0, tzinfo=tashkent_tz),  # 6 PM
+        datetime.time(hour=8, minute=0, tzinfo=tashkent_tz),   # 8 AM - ertalab
+        datetime.time(hour=10, minute=0, tzinfo=tashkent_tz),  # 10 AM - ertalab o'rtasi
+        datetime.time(hour=12, minute=0, tzinfo=tashkent_tz),  # 12 PM - tush
+        datetime.time(hour=14, minute=0, tzinfo=tashkent_tz),  # 2 PM - tushdan keyin  
+        datetime.time(hour=16, minute=0, tzinfo=tashkent_tz),  # 4 PM - tushdan keyin o'rtasi
+        datetime.time(hour=18, minute=0, tzinfo=tashkent_tz),  # 6 PM - kech
+        datetime.time(hour=20, minute=0, tzinfo=tashkent_tz),  # 8 PM - kechqurun
+        datetime.time(hour=22, minute=0, tzinfo=tashkent_tz),  # 10 PM - kechki
     ]
     
     job_queue = application.job_queue
