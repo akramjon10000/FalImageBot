@@ -3,8 +3,6 @@ Name: telegram-image-bot
 Version: 1.0.0
 Summary: Telegram bot for AI image generation using Fal.ai
 Requires-Dist: python-telegram-bot==22.4
-Requires-Dist: requests>=2.31.0
 Requires-Dist: python-dotenv>=1.0.0
 Requires-Dist: aiohttp>=3.12.15
-Requires-Dist: telegram>=0.0.1
 Provides-Extra: dev

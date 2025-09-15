@@ -203,9 +203,13 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     logger.error(f"Fal.ai API error: {response.status} - {error_text}")
                     return
         
-        # Extract image URL from response
-        if 'images' in response_data and len(response_data['images']) > 0:
-            image_url = response_data['images'][0]['url']
+        # Extract image URL from response - handle both direct and wrapped responses
+        # Fal.ai queue results may wrap output under 'response' key
+        actual_data = response_data.get('response') or response_data
+        logger.info(f"Fal.ai response structure: {list(actual_data.keys()) if isinstance(actual_data, dict) else type(actual_data)}")
+        
+        if isinstance(actual_data, dict) and 'images' in actual_data and len(actual_data['images']) > 0:
+            image_url = actual_data['images'][0]['url']
             
             # Delete the "generating" message
             if status_message:
@@ -240,7 +244,7 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                         await update.message.reply_text(error_msg)
                     except TelegramError:
                         pass
-            logger.error(f"No image URL in Fal.ai response: {response_data}")
+            logger.error(f"No image URL in Fal.ai response. Full response: {response_data}")
             
     except asyncio.TimeoutError:
         error_msg = "Rasm yaratish juda uzoq davom etdi. Iltimos qayta urinib ko'ring."
