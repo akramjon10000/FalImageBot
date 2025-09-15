@@ -6,5 +6,4 @@ Requires-Python: >=3.11
 Requires-Dist: python-telegram-bot>=20.0
 Requires-Dist: google-generativeai
 Requires-Dist: python-dotenv
-Requires-Dist: telegram>=0.0.1
 Provides-Extra: dev
