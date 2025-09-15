@@ -155,8 +155,8 @@ async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         
         # Initialize the Gemini model for image generation
-        # Note: Using Gemini 1.5 Flash model with image generation capability
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Note: Using Gemini 2.5 Flash Image model (Nano Banana) for image generation
+        model = genai.GenerativeModel('gemini-2.5-flash-image-preview')
         
         # Generate image using Google Gemini AI
         logger.info(f"Sending image generation request to Google Gemini AI")
@@ -165,12 +165,7 @@ async def imagine(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         loop = asyncio.get_running_loop()
         response = await loop.run_in_executor(
             None, 
-            lambda: model.generate_content(
-                f"Create an image of: {text_prompt}",
-                generation_config=genai.GenerationConfig(
-                    response_mime_type="image/png"
-                )
-            )
+            lambda: model.generate_content(text_prompt)
         )
         
         # Process the response and extract image data
