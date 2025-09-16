@@ -8,6 +8,27 @@ channel = "stable-25_05"
 packages = ["c-ares", "cacert", "glibcLocales", "grpc", "libxcrypt", "openssl", "pkg-config", "zlib"]
 
 [workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Telegram Bot Server"
+
+[[workflows.workflow]]
+name = "Telegram Bot Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [deployment]
 deploymentTarget = "vm"
