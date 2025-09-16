@@ -20,6 +20,9 @@ import random
 import datetime
 import json
 from datetime import timezone, timedelta
+from aiohttp import web, ClientSession
+import signal
+import sys
 
 # Import Telegram bot libraries (python-telegram-bot v20+)
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -45,10 +48,15 @@ logging.getLogger("telegram").setLevel(logging.WARNING)
 # Store user image context for interactive processing
 user_image_context = defaultdict(dict)
 
+# Global application variable for webhook mode
+application = None
+
 # Get API keys from Replit Secrets (environment variables)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 TELEGRAM_CHANNEL_ID = os.getenv('TELEGRAM_CHANNEL_ID', '@your_channel_username')
+WEBHOOK_URL = os.getenv('RENDER_EXTERNAL_URL', 'https://your-app.onrender.com')
+PORT = int(os.getenv('PORT', 5000))
 
 # Configure Google Generative AI with the API key
 if GOOGLE_API_KEY:
@@ -1520,7 +1528,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error(f"Update {update} caused error {context.error}", exc_info=context.error)
 
 
-def main() -> None:
+async def main() -> None:
     """
     Main function to initialize and start the Telegram bot
     
@@ -1597,23 +1605,84 @@ def main() -> None:
     print("🚀 Bot is starting... Press Ctrl+C to stop.")
     print("💡 Make sure you have set TELEGRAM_BOT_TOKEN and GOOGLE_API_KEY in Replit Secrets")
     print("📢 Channel posting: " + ("ENABLED" if TELEGRAM_CHANNEL_ID != '@your_channel_username' else "DISABLED"))
+    print(f"🌐 Webhook URL: {WEBHOOK_URL}/webhook")
+    print(f"🔌 Port: {PORT}")
     
-    # Start the bot and keep it running until interrupted
-    # This enables the bot to receive and respond to messages
-    # drop_pending_updates=True clears any pending updates to prevent conflicts
+    # Start the bot with webhook for web service deployment
     try:
-        application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
-    except telegram.error.Conflict as e:
-        logger.error(f"Bot conflict detected: {e}")
-        logger.error("Another bot instance is running with the same token!")
-        logger.error("Please ensure only one instance is running or rotate the bot token.")
-        print("❌ CONFLICT: Another bot instance is running with the same token!")
-        print("🔄 To fix this:")
-        print("   1. Stop any other deployments (Render, Heroku, etc.)")
-        print("   2. Or rotate your bot token via @BotFather and update it here")
+        # Start the webhook server
+        await start_webhook_server(application)
+    except Exception as e:
+        logger.error(f"Error starting webhook server: {e}")
+        print(f"❌ ERROR: {e}")
         exit(1)
+
+
+async def webhook_handler(request):
+    """Handle incoming webhook requests from Telegram"""
+    try:
+        data = await request.json()
+        update = Update.de_json(data, application.bot)
+        if update:
+            await application.process_update(update)
+        return web.Response(status=200)
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}")
+        return web.Response(status=500)
+
+
+async def health_check(request):
+    """Health check endpoint for Render"""
+    return web.Response(text="Bot is running!", status=200)
+
+
+async def start_webhook_server(app):
+    """Start the webhook server for web service deployment"""
+    global application
+    application = app
+    
+    # Initialize the application
+    await application.initialize()
+    
+    # Set up webhook URL
+    webhook_url = f"{WEBHOOK_URL}/webhook"
+    
+    try:
+        # Set webhook
+        await application.bot.set_webhook(url=webhook_url)
+        logger.info(f"Webhook set to: {webhook_url}")
+    except Exception as e:
+        logger.error(f"Failed to set webhook: {e}")
+        # Continue anyway - webhook might already be set
+    
+    # Create aiohttp web application
+    web_app = web.Application()
+    web_app.router.add_post('/webhook', webhook_handler)
+    web_app.router.add_get('/', health_check)
+    web_app.router.add_get('/health', health_check)
+    
+    # Start the web server
+    runner = web.AppRunner(web_app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', PORT)
+    await site.start()
+    
+    logger.info(f"Webhook server started on port {PORT}")
+    print(f"✅ Webhook server running on http://0.0.0.0:{PORT}")
+    
+    # Keep the server running
+    try:
+        # Wait indefinitely
+        while True:
+            await asyncio.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("Shutting down webhook server...")
+    finally:
+        await runner.cleanup()
+        await application.shutdown()
 
 
 # Entry point - run the bot when script is executed directly
 if __name__ == '__main__':
-    main()
+    # Use asyncio.run for webhook mode
+    asyncio.run(main())

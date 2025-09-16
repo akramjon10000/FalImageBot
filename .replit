@@ -34,3 +34,7 @@ outputType = "console"
 deploymentTarget = "vm"
 run = ["python", "main.py"]
 build = ["uv", "sync", "--frozen"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
