@@ -1,6 +1,6 @@
 # Overview
 
-This is a Telegram Image Generation Bot that integrates with Fal.ai's Stable Diffusion API to generate images from text prompts. The bot receives text commands from Telegram users, processes them through Fal.ai's AI image generation service, and returns the generated images back to the users. The application is built as a Python-based asynchronous bot using the python-telegram-bot library.
+This is a Telegram Image Generation Bot that integrates with Google's Gemini AI to generate images from text prompts. The bot receives text commands from Telegram users, processes them through Google's Generative AI service, and returns the generated images back to the users. The application is built as a Python-based asynchronous bot using the python-telegram-bot library with webhook support for web service deployment.
 
 # User Preferences
 
@@ -15,28 +15,29 @@ The application uses the python-telegram-bot library (version 22.4) to handle Te
 The system is built using Python's asyncio framework with aiohttp for handling HTTP requests. This allows the bot to handle multiple user requests concurrently without blocking operations, which is essential for managing the potentially long response times from AI image generation services.
 
 ## Image Generation Integration
-The bot integrates with Fal.ai's Stable Diffusion v1.5 API through a queue-based system:
-- Requests are submitted to the Fal.ai queue endpoint
-- The system polls for completion status using a dedicated polling mechanism
-- Results are retrieved once generation is complete
-- The polling system includes configurable retry limits to prevent infinite loops
+The bot integrates with Google's Gemini 2.5 Flash Image Preview model:
+- Direct API calls to Google Generative AI service
+- Real-time image generation from text prompts
+- Base64 image data processing and temporary file handling
+- Built-in error handling for API rate limits and failures
 
 ## Configuration Management
 Environment variables are used for sensitive configuration data:
 - Telegram Bot Token for API authentication
-- Fal.ai API Key for image generation service access
-- Environment variables are loaded using python-dotenv for development convenience
+- Google API Key for image generation service access
+- Webhook URL and PORT configuration for web service deployment
+- Auto-detection of deployment environment (Render vs local)
 
 ## Error Handling and Logging
 The application implements comprehensive logging using Python's built-in logging module with INFO level logging for tracking bot operations, API calls, and error conditions. The system includes proper exception handling for both Telegram API errors and external service failures.
 
 ## Request Processing Flow
 1. User sends a text command to the Telegram bot
-2. Bot receives the message and extracts the prompt
-3. Request is submitted to Fal.ai's queue system
-4. Bot polls the status endpoint until completion
-5. Generated image is retrieved and sent back to the user
-6. Errors are logged and appropriate responses are sent to users
+2. Telegram sends webhook request to bot's HTTP server
+3. Bot processes the message and extracts the prompt
+4. Request is sent to Google Gemini AI for image generation
+5. Generated image is processed and sent back to the user
+6. All errors and operations are logged for monitoring
 
 # External Dependencies
 
@@ -56,6 +57,7 @@ The application implements comprehensive logging using Python's built-in logging
 
 ## Python Runtime Dependencies
 - **asyncio**: Built-in Python asynchronous programming support
+- **aiohttp**: Asynchronous HTTP server for webhook handling
 - **logging**: Built-in Python logging framework
 - **tempfile**: Temporary file handling for image processing
 - **base64**: Image data encoding/decoding
@@ -63,29 +65,26 @@ The application implements comprehensive logging using Python's built-in logging
 
 # Recent Changes
 
-## September 15, 2025 - Replit Environment Setup Complete
-- **Project Import**: Successfully imported GitHub project to Replit environment
-- **Dependencies**: Installed all required Python packages (google-generativeai, python-telegram-bot)
-- **Environment Configuration**: Set up API keys (TELEGRAM_BOT_TOKEN, GOOGLE_API_KEY) via Replit Secrets
-- **Workflow Setup**: Configured Bot workflow to run main.py continuously
-- **Deployment**: Configured for VM deployment to maintain persistent bot operation
-- **Conflict Handling**: Added improved error handling for Telegram bot conflicts
-- **Status**: Setup complete but bot has conflict with another instance running elsewhere
+## September 16, 2025 - Web Service Deployment Configuration
+- **Deployment Strategy**: Converted bot from Background Worker to Web Service for Render free tier
+- **Webhook Implementation**: Replaced polling with webhook for better resource efficiency
+- **HTTP Server**: Added aiohttp server with health check endpoints (/, /health)
+- **Port Configuration**: Configured to use PORT environment variable (default 5000)
+- **render.yaml Update**: Changed from worker to web service type with free plan
+- **Replit Workflow**: Removed local workflow to prevent webhook/polling conflicts
+- **Status**: Bot runs exclusively on Render as web service, not on Replit
 
-## Critical Issue: Bot Token Conflict
-⚠️ **IMPORTANT**: The bot cannot run properly because another instance is using the same bot token (likely on Render based on render.yaml file).
+## Current Deployment Status
+🚀 **ACTIVE DEPLOYMENT**: Render Web Service (Free Tier)
+- **Service Type**: Web Service (not Background Worker)
+- **Port**: 5000 (required by Render)
+- **Health Checks**: GET / and GET /health endpoints
+- **Webhook**: POST /webhook for Telegram updates
 
-**To fix this conflict, choose ONE of these options:**
-1. **Rotate Bot Token**: 
-   - Go to Telegram @BotFather
-   - Send `/revoke` then `/token` to get a new token
-   - Update only this Replit's TELEGRAM_BOT_TOKEN secret with the new token
-   
-2. **Stop Other Deployments**:
-   - Check Render dashboard and stop/suspend the telegram-image-bot service
-   - Remove TELEGRAM_BOT_TOKEN from other environments
-   
-**Until resolved**: The bot will show conflict errors and cannot serve users reliably.
+⚠️ **REPLIT STATUS**: Development environment only
+- **No Active Workflow**: Bot does not run on Replit to avoid conflicts
+- **Reason**: Telegram doesn't allow both polling and webhook simultaneously
+- **Usage**: Code development and testing only
 
 ## Previous - Channel Posting System Complete
 - **Channel Posting Feature**: Added automated daily posting system with AI-generated images and educational content
