@@ -1,0 +1,209 @@
+==> Downloading cache...
+==> Cloning from https://github.com/akramjon10000/FalImageBot
+==> Checking out commit a91bb52507de67c75469a3d4425127123ce84c8d in branch main
+==> Transferred 149MB in 8s. Extraction took 4s.
+==> Using Python version 3.13.4 (default)
+==> Docs on specifying a Python version: https://render.com/docs/python-version
+==> Using Poetry version 2.1.3 (default)
+==> Docs on specifying a Poetry version: https://render.com/docs/poetry-version
+==> Using uv version 0.7.12 (default)
+==> Docs on specifying a uv version: https://render.com/docs/uv-version
+==> Running build command 'pip install -r requirements.txt'...
+Collecting google-generativeai==0.8.5 (from -r requirements.txt (line 1))
+  Using cached google_generativeai-0.8.5-py3-none-any.whl.metadata (3.9 kB)
+Collecting python-telegram-bot==22.4 (from python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached python_telegram_bot-22.4-py3-none-any.whl.metadata (17 kB)
+Collecting aiohttp==3.12.15 (from -r requirements.txt (line 3))
+  Using cached aiohttp-3.12.15-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.7 kB)
+Collecting telegram (from -r requirements.txt (line 7))
+  Downloading telegram-0.0.1.tar.gz (879 bytes)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting google-ai-generativelanguage==0.6.15 (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached google_ai_generativelanguage-0.6.15-py3-none-any.whl.metadata (5.7 kB)
+Collecting google-api-core (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached google_api_core-2.25.1-py3-none-any.whl.metadata (3.0 kB)
+Collecting google-api-python-client (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached google_api_python_client-2.181.0-py3-none-any.whl.metadata (7.0 kB)
+Collecting google-auth>=2.15.0 (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached google_auth-2.40.3-py2.py3-none-any.whl.metadata (6.2 kB)
+Collecting protobuf (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached protobuf-6.32.1-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting pydantic (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached pydantic-2.11.9-py3-none-any.whl.metadata (68 kB)
+Collecting tqdm (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached tqdm-4.67.1-py3-none-any.whl.metadata (57 kB)
+Collecting typing-extensions (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting httpx<0.29,>=0.27 (from python-telegram-bot==22.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp==3.12.15->-r requirements.txt (line 3))
+  Using cached aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp==3.12.15->-r requirements.txt (line 3))
+  Using cached aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting attrs>=17.3.0 (from aiohttp==3.12.15->-r requirements.txt (line 3))
+  Using cached attrs-25.3.0-py3-none-any.whl.metadata (10 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp==3.12.15->-r requirements.txt (line 3))
+  Using cached frozenlist-1.7.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (18 kB)
+Collecting multidict<7.0,>=4.5 (from aiohttp==3.12.15->-r requirements.txt (line 3))
+  Using cached multidict-6.6.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+Collecting propcache>=0.2.0 (from aiohttp==3.12.15->-r requirements.txt (line 3))
+  Using cached propcache-0.3.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (12 kB)
+Collecting yarl<2.0,>=1.17.0 (from aiohttp==3.12.15->-r requirements.txt (line 3))
+  Using cached yarl-1.20.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (73 kB)
+Collecting proto-plus<2.0.0dev,>=1.22.3 (from google-ai-generativelanguage==0.6.15->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached proto_plus-1.26.1-py3-none-any.whl.metadata (2.2 kB)
+Collecting protobuf (from google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached protobuf-5.29.5-cp38-abi3-manylinux2014_x86_64.whl.metadata (592 bytes)
+Collecting apscheduler<3.12.0,>=3.10.4 (from python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached APScheduler-3.11.0-py3-none-any.whl.metadata (6.4 kB)
+Collecting tzlocal>=3.0 (from apscheduler<3.12.0,>=3.10.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached tzlocal-5.3.1-py3-none-any.whl.metadata (7.6 kB)
+Collecting googleapis-common-protos<2.0.0,>=1.56.2 (from google-api-core->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached googleapis_common_protos-1.70.0-py3-none-any.whl.metadata (9.3 kB)
+Collecting requests<3.0.0,>=2.18.0 (from google-api-core->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+Collecting grpcio<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-ai-generativelanguage==0.6.15->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached grpcio-1.75.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.7 kB)
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-ai-generativelanguage==0.6.15->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached grpcio_status-1.75.0-py3-none-any.whl.metadata (1.1 kB)
+Collecting cachetools<6.0,>=2.0.0 (from google-auth>=2.15.0->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached cachetools-5.5.2-py3-none-any.whl.metadata (5.4 kB)
+Collecting pyasn1-modules>=0.2.1 (from google-auth>=2.15.0->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting rsa<5,>=3.1.4 (from google-auth>=2.15.0->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+INFO: pip is looking at multiple versions of grpcio-status to determine which version is compatible with other requirements. This could take a while.
+Collecting grpcio-status<2.0.0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.10.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,!=2.8.*,!=2.9.*,<3.0.0dev,>=1.34.1->google-ai-generativelanguage==0.6.15->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached grpcio_status-1.74.0-py3-none-any.whl.metadata (1.1 kB)
+  Using cached grpcio_status-1.73.1-py3-none-any.whl.metadata (1.1 kB)
+  Using cached grpcio_status-1.73.0-py3-none-any.whl.metadata (1.1 kB)
+  Using cached grpcio_status-1.72.2-py3-none-any.whl.metadata (1.1 kB)
+  Using cached grpcio_status-1.72.1-py3-none-any.whl.metadata (1.1 kB)
+  Using cached grpcio_status-1.71.2-py3-none-any.whl.metadata (1.1 kB)
+Collecting anyio (from httpx<0.29,>=0.27->python-telegram-bot==22.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached anyio-4.10.0-py3-none-any.whl.metadata (4.0 kB)
+Collecting certifi (from httpx<0.29,>=0.27->python-telegram-bot==22.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached certifi-2025.8.3-py3-none-any.whl.metadata (2.4 kB)
+Collecting httpcore==1.* (from httpx<0.29,>=0.27->python-telegram-bot==22.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting idna (from httpx<0.29,>=0.27->python-telegram-bot==22.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached idna-3.10-py3-none-any.whl.metadata (10 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx<0.29,>=0.27->python-telegram-bot==22.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting charset_normalizer<4,>=2 (from requests<3.0.0,>=2.18.0->google-api-core->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached charset_normalizer-3.4.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (36 kB)
+Collecting urllib3<3,>=1.21.1 (from requests<3.0.0,>=2.18.0->google-api-core->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached urllib3-2.5.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting pyasn1>=0.1.3 (from rsa<5,>=3.1.4->google-auth>=2.15.0->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached pyasn1-0.6.1-py3-none-any.whl.metadata (8.4 kB)
+Collecting sniffio>=1.1 (from anyio->httpx<0.29,>=0.27->python-telegram-bot==22.4->python-telegram-bot[job-queue]==22.4->-r requirements.txt (line 2))
+  Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting httplib2<1.0.0,>=0.19.0 (from google-api-python-client->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached httplib2-0.31.0-py3-none-any.whl.metadata (2.2 kB)
+Collecting google-auth-httplib2<1.0.0,>=0.2.0 (from google-api-python-client->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached google_auth_httplib2-0.2.0-py2.py3-none-any.whl.metadata (2.2 kB)
+Collecting uritemplate<5,>=3.0.1 (from google-api-python-client->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached uritemplate-4.2.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting pyparsing<4,>=3.0.4 (from httplib2<1.0.0,>=0.19.0->google-api-python-client->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached pyparsing-3.2.4-py3-none-any.whl.metadata (5.0 kB)
+Collecting annotated-types>=0.6.0 (from pydantic->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.33.2 (from pydantic->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached pydantic_core-2.33.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.8 kB)
+Collecting typing-inspection>=0.4.0 (from pydantic->google-generativeai==0.8.5->-r requirements.txt (line 1))
+  Using cached typing_inspection-0.4.1-py3-none-any.whl.metadata (2.6 kB)
+Using cached google_generativeai-0.8.5-py3-none-any.whl (155 kB)
+Using cached python_telegram_bot-22.4-py3-none-any.whl (729 kB)
+Using cached aiohttp-3.12.15-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.7 MB)
+Using cached google_ai_generativelanguage-0.6.15-py3-none-any.whl (1.3 MB)
+Using cached APScheduler-3.11.0-py3-none-any.whl (64 kB)
+Using cached google_api_core-2.25.1-py3-none-any.whl (160 kB)
+Using cached google_auth-2.40.3-py2.py3-none-any.whl (216 kB)
+Using cached cachetools-5.5.2-py3-none-any.whl (10 kB)
+Using cached googleapis_common_protos-1.70.0-py3-none-any.whl (294 kB)
+Using cached grpcio-1.75.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.4 MB)
+Using cached grpcio_status-1.71.2-py3-none-any.whl (14 kB)
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached multidict-6.6.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (254 kB)
+Using cached proto_plus-1.26.1-py3-none-any.whl (50 kB)
+Using cached protobuf-5.29.5-cp38-abi3-manylinux2014_x86_64.whl (319 kB)
+Using cached requests-2.32.5-py3-none-any.whl (64 kB)
+Using cached charset_normalizer-3.4.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (151 kB)
+Using cached idna-3.10-py3-none-any.whl (70 kB)
+Using cached rsa-4.9.1-py3-none-any.whl (34 kB)
+Using cached typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Using cached urllib3-2.5.0-py3-none-any.whl (129 kB)
+Using cached yarl-1.20.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (352 kB)
+Using cached aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+Using cached aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Using cached attrs-25.3.0-py3-none-any.whl (63 kB)
+Using cached certifi-2025.8.3-py3-none-any.whl (161 kB)
+Using cached frozenlist-1.7.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (232 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Using cached propcache-0.3.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (206 kB)
+Using cached pyasn1-0.6.1-py3-none-any.whl (83 kB)
+Using cached pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Using cached tzlocal-5.3.1-py3-none-any.whl (18 kB)
+Using cached anyio-4.10.0-py3-none-any.whl (107 kB)
+Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Using cached google_api_python_client-2.181.0-py3-none-any.whl (14.1 MB)
+Using cached google_auth_httplib2-0.2.0-py2.py3-none-any.whl (9.3 kB)
+Using cached httplib2-0.31.0-py3-none-any.whl (91 kB)
+Using cached pyparsing-3.2.4-py3-none-any.whl (113 kB)
+Using cached uritemplate-4.2.0-py3-none-any.whl (11 kB)
+Using cached pydantic-2.11.9-py3-none-any.whl (444 kB)
+Using cached pydantic_core-2.33.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.0 MB)
+Using cached annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Using cached typing_inspection-0.4.1-py3-none-any.whl (14 kB)
+Using cached tqdm-4.67.1-py3-none-any.whl (78 kB)
+Building wheels for collected packages: telegram
+  Building wheel for telegram (pyproject.toml): started
+  Building wheel for telegram (pyproject.toml): finished with status 'done'
+  Created wheel for telegram: filename=telegram-0.0.1-py3-none-any.whl size=1326 sha256=f3d8065a87f222a33286ab5b89e41464dbf3d8c0823dec16abf10906074bf0af
+  Stored in directory: /opt/render/.cache/wheels/ed/a7/da/985c884676d0871f049aaa23d93ca2eab485bad0475e0a4319
+Successfully built telegram
+Installing collected packages: telegram, urllib3, uritemplate, tzlocal, typing-extensions, tqdm, sniffio, pyparsing, pyasn1, protobuf, propcache, multidict, idna, h11, frozenlist, charset_normalizer, certifi, cachetools, attrs, annotated-types, aiohappyeyeballs, yarl, typing-inspection, rsa, requests, pydantic-core, pyasn1-modules, proto-plus, httplib2, httpcore, grpcio, googleapis-common-protos, apscheduler, anyio, aiosignal, pydantic, httpx, grpcio-status, google-auth, aiohttp, python-telegram-bot, google-auth-httplib2, google-api-core, google-api-python-client, google-ai-generativelanguage, google-generativeai
+Successfully installed aiohappyeyeballs-2.6.1 aiohttp-3.12.15 aiosignal-1.4.0 annotated-types-0.7.0 anyio-4.10.0 apscheduler-3.11.0 attrs-25.3.0 cachetools-5.5.2 certifi-2025.8.3 charset_normalizer-3.4.3 frozenlist-1.7.0 google-ai-generativelanguage-0.6.15 google-api-core-2.25.1 google-api-python-client-2.181.0 google-auth-2.40.3 google-auth-httplib2-0.2.0 google-generativeai-0.8.5 googleapis-common-protos-1.70.0 grpcio-1.75.0 grpcio-status-1.71.2 h11-0.16.0 httpcore-1.0.9 httplib2-0.31.0 httpx-0.28.1 idna-3.10 multidict-6.6.4 propcache-0.3.2 proto-plus-1.26.1 protobuf-5.29.5 pyasn1-0.6.1 pyasn1-modules-0.4.2 pydantic-2.11.9 pydantic-core-2.33.2 pyparsing-3.2.4 python-telegram-bot-22.4 requests-2.32.5 rsa-4.9.1 sniffio-1.3.1 telegram-0.0.1 tqdm-4.67.1 typing-extensions-4.15.0 typing-inspection-0.4.1 tzlocal-5.3.1 uritemplate-4.2.0 urllib3-2.5.0 yarl-1.20.1
+[notice] A new release of pip is available: 25.1.1 -> 25.2
+[notice] To update, run: pip install --upgrade pip
+==> Uploading build...
+==> Uploaded in 5.5s. Compression took 1.6s
+==> Build successful 🎉
+==> Deploying...
+==> Running 'python main.py'
+2025-09-16 16:23:44,563 - __main__ - INFO - Google Generative AI configured successfully
+2025-09-16 16:23:45,860 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,860 - __main__ - INFO - Scheduled daily post at 08:00 Tashkent time
+2025-09-16 16:23:45,861 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,861 - __main__ - INFO - Scheduled daily post at 10:00 Tashkent time
+2025-09-16 16:23:45,861 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,861 - __main__ - INFO - Scheduled daily post at 12:00 Tashkent time
+2025-09-16 16:23:45,861 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,862 - __main__ - INFO - Scheduled daily post at 14:00 Tashkent time
+2025-09-16 16:23:45,862 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,862 - __main__ - INFO - Scheduled daily post at 16:00 Tashkent time
+2025-09-16 16:23:45,862 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,862 - __main__ - INFO - Scheduled daily post at 18:00 Tashkent time
+2025-09-16 16:23:45,863 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,863 - __main__ - INFO - Scheduled daily post at 20:00 Tashkent time
+2025-09-16 16:23:45,863 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-09-16 16:23:45,863 - __main__ - INFO - Scheduled daily post at 22:00 Tashkent time
+2025-09-16 16:23:45,863 - __main__ - INFO - Daily channel posting enabled for: -1002966993965
+2025-09-16 16:23:45,863 - __main__ - INFO - 🤖 Telegram Image Generation Bot is starting...
+2025-09-16 16:23:46,292 - __main__ - INFO - Webhook set to: https://falimagebot.onrender.com/webhook
+2025-09-16 16:23:46,294 - __main__ - INFO - Webhook server started on port 10000
+2025-09-16 16:23:47,164 - aiohttp.access - INFO - 127.0.0.1 [16/Sep/2025:16:23:47 +0000] "HEAD / HTTP/1.1" 200 154 "-" "Go-http-client/1.1"
+==> Your service is live 🎉
+==> 
+==> ///////////////////////////////////////////////////////////
+==> 
+==> Available at your primary URL https://falimagebot.onrender.com
+==> 
+==> ///////////////////////////////////////////////////////////
+2025-09-16 16:23:59,659 - aiohttp.access - INFO - 127.0.0.1 [16/Sep/2025:16:23:59 +0000] "GET / HTTP/1.1" 200 169 "-" "Go-http-client/2.0"
