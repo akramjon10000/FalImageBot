@@ -302,16 +302,6 @@ def health_check():
     """Health check endpoint"""
     return jsonify({"status": "alive"})
 
-@app.route('/test', methods=['GET'])
-def test_post():
-    """Test endpoint to manually trigger a post"""
-    try:
-        send_post_to_channel()
-        return jsonify({"status": "test post sent", "posts_today": daily_post_count})
-    except Exception as e:
-        logger.error(f"Test post failed: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
 def main():
     """Main function"""
     print("🤖 AI Post Bot Render.com Web Service da ishga tushdi. 07:00-21:00 UTC oralig'ida 20 ta post jo'natiladi.")
